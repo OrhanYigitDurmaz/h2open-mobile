@@ -5,6 +5,8 @@ app_description = "Mobile integration for H2Open"
 app_email = "orhan@h2open.com"
 app_license = "mit"
 
+required_apps = ["frappe"]
+
 # Apps
 # ------------------
 
