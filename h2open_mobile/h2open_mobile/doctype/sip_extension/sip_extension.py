@@ -3,7 +3,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
-from h2open_mobile.asterisk import provision_extension
+from h2open_mobile.h2open_mobile.asterisk import provision_extension
 
 
 class SIPExtension(Document):
