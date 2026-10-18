@@ -202,7 +202,7 @@ private fun TripContent(trip: Trip, busy: Boolean, onStart: () -> Unit, onClose:
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(tripStateLabel(trip.state), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                trip.vehicle?.let { Text(listOfNotNull(it.licensePlate, it.name).distinct().joinToString(" · ")) }
+                trip.vehicle?.let { Text(it.label) }
                 Text(pluralStringResource(R.plurals.trip_progress, trip.stopCount, trip.stopCount - trip.pendingCount, trip.stopCount))
                 Text(stringResource(R.string.trip_bottles, trip.plannedBottleQty))
                 if (trip.cashExpected > 0) Text(stringResource(R.string.trip_cash, formatMoney(trip.cashExpected, trip.currency)))

@@ -140,7 +140,7 @@ private fun TripCard(trip: Trip, onClick: () -> Unit) {
                 Text(tripStateLabel(trip.state), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
             trip.vehicle?.let { vehicle ->
-                Text(listOfNotNull(vehicle.licensePlate, vehicle.name).distinct().joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+                Text(vehicle.label, style = MaterialTheme.typography.bodyMedium)
             }
             val done = trip.stopCount - trip.pendingCount
             Text(pluralStringResource(R.plurals.trip_progress, trip.stopCount, done, trip.stopCount), style = MaterialTheme.typography.bodyMedium)

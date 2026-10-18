@@ -11,8 +11,9 @@ class H2oMessagingService : FirebaseMessagingService() {
     private val app get() = application as H2oApplication
     private val main = Handler(Looper.getMainLooper())
 
-    override fun onNewToken(token: String) {
-        app.registerPush(token)
+    /** After [Push.register], and whenever the installation ID changes. */
+    override fun onRegistered(installationId: String) {
+        app.registerPush(installationId)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

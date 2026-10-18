@@ -180,7 +180,7 @@ class H2oApi(
         builder.header("Accept", "application/json")
         if (bearer != null) builder.header("Authorization", "Bearer $bearer")
         val response = http.newCall(builder.build()).await()
-        val text = response.use { it.body.string() }
+        val text = response.body
         if (!response.isSuccessful) {
             val message = errorMessage(text) ?: response.message.ifBlank { "HTTP ${response.code}" }
             throw if (response.code == 401) UnauthorizedException(message) else ApiException(response.code, message)
@@ -235,9 +235,26 @@ class H2oApi(
     }
 }
 
-private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
+/** A finished response with its body already read. */
+private class HttpResult(val code: Int, val message: String, val body: String) {
+    val isSuccessful get() = code in 200..299
+}
+
+/**
+ * Runs the call and reads the whole body on OkHttp's thread: the caller is
+ * often the main thread, where Android forbids the socket reads a body
+ * larger than the first packet needs.
+ */
+private suspend fun Call.await(): HttpResult = suspendCancellableCoroutine { cont ->
     enqueue(object : Callback {
-        override fun onResponse(call: Call, response: Response) = cont.resume(response)
+        override fun onResponse(call: Call, response: Response) {
+            val result = try {
+                response.use { HttpResult(it.code, it.message, it.body.string()) }
+            } catch (e: IOException) {
+                return onFailure(call, e)
+            }
+            cont.resume(result)
+        }
         override fun onFailure(call: Call, e: IOException) {
             if (!cont.isCancelled) cont.resumeWithException(e)
         }

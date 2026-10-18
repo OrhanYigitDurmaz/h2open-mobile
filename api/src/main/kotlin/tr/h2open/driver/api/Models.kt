@@ -97,7 +97,13 @@ data class Vehicle(
     val id: Long,
     val name: String,
     @SerialName("license_plate") @Serializable(OdooStringSerializer::class) val licensePlate: String? = null,
-)
+) {
+    /** Odoo's fleet name already starts with the plate ("34 H2O 001: Ford/Transit"); add it only when missing. */
+    val label: String get() = licensePlate
+        ?.takeIf { it.isNotBlank() && !name.contains(it) }
+        ?.let { "$it · $name" }
+        ?: name
+}
 
 @Serializable
 data class Trip(
