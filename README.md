@@ -34,11 +34,12 @@ CI builds the debug APK on every pull request; download it from the run's
 
 ## Try it against a local Odoo
 
-Run Odoo with the h2o modules and demo data, then sign in with server
-`http://10.0.2.2:8069` from the emulator (or your PC's LAN address from a
-phone; plain HTTP is only allowed to `10.0.2.2` and `localhost`, see
-`app/src/main/res/xml/network_security_config.xml`). The demo driver is
-`driver` / `driver`.
+Run Odoo with the h2o modules and demo data, then sign in to the debug APK
+with server `http://10.0.2.2:8069` from the emulator, or your PC's LAN
+address (`http://192.168.x.x:8069`) from a phone on the same network. Debug
+builds allow plain HTTP to any host; release builds only allow HTTPS (see the
+two `network_security_config.xml` files). The demo driver is `driver` /
+`driver`.
 
 The API client also has an end-to-end test that drives a whole trip on a real
 server. It runs only when `H2O_IT_URL` is set:
