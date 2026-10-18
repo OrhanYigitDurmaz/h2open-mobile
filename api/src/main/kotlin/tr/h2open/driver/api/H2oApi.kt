@@ -145,29 +145,12 @@ class H2oApi(
             .writeTimeout(60, TimeUnit.SECONDS) // signatures and photos
             .build()
 
-        /**
-         * `odoo.example.com` → `https://odoo.example.com/`. Without a scheme, a
-         * local address (`192.168.12.1:8069`, `localhost`, `*.local`) gets
-         * `http://`: a development Odoo on the LAN has no certificate.
-         */
+        /** `odoo.example.com` → `https://odoo.example.com/`; an explicit `http://` is kept. */
         fun normalizeBaseUrl(raw: String): String {
             var url = raw.trim()
             val lower = url.lowercase()
-            url = when {
-                lower.startsWith("http://") || lower.startsWith("https://") -> url
-                isLocalHost(lower.substringBefore('/').substringBefore(':')) -> "http://$url"
-                else -> "https://$url"
-            }
+            if (!lower.startsWith("http://") && !lower.startsWith("https://")) url = "https://$url"
             return if (url.endsWith("/")) url else "$url/"
-        }
-
-        private fun isLocalHost(host: String): Boolean {
-            if (host == "localhost" || host.endsWith(".local")) return true
-            val parts = host.split('.').map { it.toIntOrNull() ?: return false }
-            if (parts.size != 4 || parts.any { it !in 0..255 }) return false
-            val (a, b) = parts
-            return a == 10 || a == 127 || (a == 192 && b == 168) || (a == 172 && b in 16..31) ||
-                (a == 100 && b in 64..127) // Tailscale / CGNAT
         }
 
         /** Odoo's json2 errors carry a `message`; werkzeug errors may be HTML or plain text. */
