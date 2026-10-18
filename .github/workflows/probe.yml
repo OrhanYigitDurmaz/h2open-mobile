@@ -1,0 +1,31 @@
+name: Probe (temporary)
+
+on:
+  pull_request:
+
+jobs:
+  probe:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Latest Google Maven versions
+        run: |
+          for m in com/android/tools/build/gradle androidx/compose/compose-bom androidx/core/core-ktx \
+                   androidx/activity/activity-compose androidx/lifecycle/lifecycle-runtime-compose \
+                   androidx/navigation/navigation-compose androidx/fragment/fragment \
+                   com/google/firebase/firebase-messaging com/google/firebase/firebase-bom \
+                   androidx/compose/material/material-icons-extended androidx/compose/material3/material3; do
+            echo "$m: $(curl -s https://dl.google.com/android/maven2/$m/maven-metadata.xml | grep -o '<version>[^<]*' | sed 's/<version>//' | tail -12 | tr '\n' ' ')"
+          done
+      - name: Compiler and Gradle warnings
+        run: ./gradlew --no-configuration-cache --warning-mode all :app:compileDebugKotlin :api:compileTestKotlin :sip:compileTestKotlin 2>&1 | grep -E "^w: |warning|deprecat" || true
+      - name: Lint report
+        run: |
+          ./gradlew :app:lintDebug || true
+          cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt || find app/build -name "lint-results*.txt" -exec cat {} \;
