@@ -129,10 +129,9 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
         quantities.clear()
         stop.lines.forEach { quantities[it.productId] = it.qtyPlanned }
         empties = stop.order?.emptiesExpected ?: 0
-        paymentMethod = stop.paymentMethod ?: when (stop.paymentMode) {
-            PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.ACCOUNT -> stop.paymentMode
-            else -> if (stop.amountDue > 0) PaymentMethod.CASH else PaymentMethod.NONE
-        }
+        paymentMethod = stop.paymentMethod
+            ?: stop.paymentMode?.takeIf { it in PaymentMethod.all }
+            ?: if (stop.amountDue > 0) PaymentMethod.CASH else PaymentMethod.NONE
     }
 
     fun deliver(signature: String?) {
