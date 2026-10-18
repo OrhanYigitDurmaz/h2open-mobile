@@ -6,11 +6,15 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import tr.h2open.driver.api.H2oApi
 import tr.h2open.driver.api.UnauthorizedException
 import tr.h2open.driver.data.Session
 import tr.h2open.driver.data.SessionStore
+import tr.h2open.driver.push.OrderNotifications
 import tr.h2open.driver.push.Push
 import tr.h2open.driver.voip.VoipManager
 
@@ -24,10 +28,20 @@ class H2oApplication : Application() {
     /** Calls over the office PBX. */
     val voip: VoipManager by lazy { VoipManager(this) }
 
+    private val ordersChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Fires when a push says an order was placed or taken: the Orders tab reloads. */
+    val ordersChangedEvents: SharedFlow<Unit> = ordersChanged.asSharedFlow()
+
+    fun onOrdersChanged() {
+        ordersChanged.tryEmit(Unit)
+    }
+
     override fun onCreate() {
         super.onCreate()
         sessions = SessionStore(this)
         Push.init(this)
+        OrderNotifications.createChannel(this)
         // The token may have changed while the app was not running.
         if (sessions.session.value != null) registerPush()
     }

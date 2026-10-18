@@ -2,7 +2,8 @@
 
 Android app for H2Open delivery drivers: sign in, see today's trips, work
 through the stops and confirm each delivery (quantities, empties collected,
-payment, signature). It talks to the `h2o_driver` API of the
+payment, signature). Drivers are notified when an order is placed and can take
+it themselves from the Orders tab: it goes on their trip of the day. It talks to the `h2o_driver` API of the
 [h2open-modules](https://github.com/OrhanYigitDurmaz/h2open-modules) Odoo
 modules (see `SPEC.md` there). Calling customers over VoIP (Asterisk) and push
 notifications come next.
@@ -20,14 +21,19 @@ Kotlin, Jetpack Compose, Material 3. Min Android 8.0 (API 26).
     `api/H2oApi.kt` refreshes the access token before it expires and once on
     a 401, one refresh at a time; a refused refresh goes back to the login
     screen. Drivers who use the app at least every 90 days stay signed in.
-  * `ui/login`, `ui/trips`, `ui/trip`, `ui/stop`: one screen each.
+  * `ui/login`, `ui/trips`, `ui/trip`, `ui/stop`, `ui/orders`: one screen
+    each. Trips and Orders are the two tabs; the Orders tab lists the open
+    orders (`GET driver/orders`) and takes one (`POST driver/orders/<id>/claim`).
+    A stop the driver took can be given back from the stop screen.
   * `voip/`: calls over the office PBX. `VoipManager` asks Odoo for SIP
     credentials (`POST sip/credentials`), registers only while a call or a
     push needs it, and pairs each SIP call with a WebRTC audio session
     (`WebRtcMedia`). `CallService` is the foreground service and call
     notification, `CallActivity` the full-screen call UI.
   * `push/`: Firebase Cloud Messaging; an `incoming_call` data message
-    wakes the app to register so Asterisk can ring it.
+    wakes the app to register so Asterisk can ring it. `order_open` shows a
+    "New order" notification that opens the Orders tab; `order_claimed`
+    removes it once a driver has taken the order.
 * `sip/`: plain Kotlin SIP-over-WebSocket user agent (RFC 3261 / 7118):
   registration with digest auth, outgoing and incoming calls, cancel, hang
   up. Media is not its job: it carries the SDP the app hands it.

@@ -163,6 +163,46 @@ class H2oApiTest {
     }
 
     @Test
+    fun `open orders and claiming one`() = runTest {
+        server.enqueue(json("""[{"id": 9, "name": "S00009", "delivery_date": "2026-10-18", "time_window": "any",
+            "zone": {"id": 1, "name": "Moda"}, "my_zone": true,
+            "partner": {"id": 21, "name": "Ayşe Yılmaz", "street": "Moda Cad. 12", "city": "İstanbul", "zip": "34710"},
+            "note": "", "empties_expected": 2, "payment_mode": null, "amount_total": 100.0, "currency": "TRY",
+            "lines": [{"product_id": 5, "product_name": "19 L Damacana", "product_kind": "water_returnable",
+                "uom": "Units", "qty": 2.0}]}]"""))
+        val order = api.openOrders().single()
+        assertTrue(order.myZone)
+        assertEquals("Moda Cad. 12, 34710 İstanbul", order.partner.address)
+        assertEquals(2.0, order.lines.single().qty, 0.0)
+        assertEquals("/h2o/api/v1/driver/orders", server.takeRequest().target)
+
+        val claimedStop = STOP_PENDING.replace(""""done_at": false""", """"done_at": false, "claimed": true""")
+        server.enqueue(json("""{"trip": ${TRIP_DETAIL.replace("\"stops\": [$STOP_PENDING]", "\"stops\": []")},
+            "stop": $claimedStop}"""))
+        val result = api.claimOrder(9)
+        assertEquals(3, result.trip.id)
+        assertTrue(result.stop.canRelease)
+        val req = server.takeRequest()
+        assertEquals("POST", req.method)
+        assertEquals("/h2o/api/v1/driver/orders/9/claim", req.target)
+
+        server.enqueue(json("""{"message": "This order was already taken"}""", code = 409))
+        try {
+            api.claimOrder(9)
+            fail("expected a conflict")
+        } catch (e: ApiException) {
+            assertEquals(409, e.status)
+            assertEquals("This order was already taken", e.message)
+        }
+    }
+
+    @Test
+    fun `planned stops cannot be given back`() = runTest {
+        server.enqueue(json(TRIP_DETAIL))
+        assertFalse(api.trip(3).stops.single().canRelease)
+    }
+
+    @Test
     fun `base url is normalized`() {
         assertEquals("https://odoo.h2open.com.tr/", H2oApi.normalizeBaseUrl(" odoo.h2open.com.tr "))
         assertEquals("http://10.0.2.2:8069/", H2oApi.normalizeBaseUrl("http://10.0.2.2:8069"))
