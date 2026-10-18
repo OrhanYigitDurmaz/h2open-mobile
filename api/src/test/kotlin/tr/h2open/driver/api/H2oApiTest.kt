@@ -66,6 +66,25 @@ class H2oApiTest {
     }
 
     @Test
+    fun `sip credentials`() = runTest {
+        server.enqueue(json("""{"username": "1001", "password": "pw", "domain": "pbx.h2open.com.tr",
+            "wss_url": "wss://vps.h2open.com.tr/ws", "expires_at": "2026-10-18T22:00:00Z", "ice_servers": []}"""))
+        val creds = api.sipCredentials()
+        assertEquals("wss://vps.h2open.com.tr/ws", creds.wssUrl)
+        assertEquals(java.time.Instant.parse("2026-10-18T22:00:00Z").toEpochMilli(), creds.expiresAtMillis)
+        assertEquals("POST", server.takeRequest().method)
+    }
+
+    @Test
+    fun `sip credentials with unset settings`() = runTest {
+        server.enqueue(json("""{"username": "1001", "password": "pw", "domain": false, "wss_url": false,
+            "expires_at": "2026-10-18T22:00:00Z", "ice_servers": []}"""))
+        val creds = api.sipCredentials()
+        assertNull(creds.domain)
+        assertNull(creds.wssUrl)
+    }
+
+    @Test
     fun `trip detail parses stops`() = runTest {
         server.enqueue(json(TRIP_DETAIL))
         val trip = api.trip(3)

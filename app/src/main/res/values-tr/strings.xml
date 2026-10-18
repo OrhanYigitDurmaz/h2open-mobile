@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">H2Open Şoför</string>
     <string name="action_back">Geri</string>
     <string name="action_cancel">Vazgeç</string>
     <string name="action_clear">Temizle</string>
@@ -8,6 +7,29 @@
     <string name="action_increase">Artır</string>
     <string name="action_retry">Tekrar dene</string>
     <string name="action_sign_out">Çıkış yap</string>
+    <string name="app_name">H2Open Şoför</string>
+    <string name="call_active">Görüşmede</string>
+    <string name="call_answer">Yanıtla</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="call_busy">Meşgul</string>
+    <string name="call_caller_hung_up">Arayan kapattı</string>
+    <string name="call_connecting">Bağlanıyor…</string>
+    <string name="call_connection_lost">Bağlantı koptu</string>
+    <string name="call_decline">Reddet</string>
+    <string name="call_declined">Reddedildi</string>
+    <string name="call_ended">Arama bitti</string>
+    <string name="call_failed">Arama yapılamadı.</string>
+    <string name="call_hang_up">Kapat</string>
+    <string name="call_incoming">Gelen arama</string>
+    <string name="call_mute">Sessiz</string>
+    <string name="call_no_answer">Yanıt yok</string>
+    <string name="call_not_found">Bu numaraya ulaşılamıyor.</string>
+    <string name="call_not_set_up">Hesabınız için arama henüz ayarlanmadı.</string>
+    <string name="call_ringing">Çalıyor…</string>
+    <string name="call_speaker">Hoparlör</string>
+    <string name="call_waking">Gelen arama bağlanıyor…</string>
+    <string name="channel_calls_incoming">Gelen aramalar</string>
+    <string name="channel_calls_ongoing">Süren aramalar</string>
     <string name="error_network">Sunucuya ulaşılamıyor. Bağlantıyı kontrol edip tekrar deneyin.</string>
     <string name="error_not_driver">Bu hesap şoför olarak tanımlı değil.</string>
     <string name="error_not_found">Bu sefer veya durak artık size ait değil.</string>
@@ -33,6 +55,7 @@
     <string name="stop_amount_hint">Boş bırakırsanız ödenecek tutarın tamamı alınır.</string>
     <string name="stop_bottle_balance">Müşterideki damacana: %1$d</string>
     <string name="stop_call">Ara</string>
+    <string name="stop_call_phone">Telefondan ara</string>
     <string name="stop_deliver">Teslim edildi</string>
     <string name="stop_deliver_title">Teslimat</string>
     <string name="stop_elevator_no">asansör yok</string>

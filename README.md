@@ -21,6 +21,19 @@ Kotlin, Jetpack Compose, Material 3. Min Android 8.0 (API 26).
     a 401, one refresh at a time; a refused refresh goes back to the login
     screen. Drivers who use the app at least every 90 days stay signed in.
   * `ui/login`, `ui/trips`, `ui/trip`, `ui/stop`: one screen each.
+  * `voip/`: calls over the office PBX. `VoipManager` asks Odoo for SIP
+    credentials (`POST sip/credentials`), registers only while a call or a
+    push needs it, and pairs each SIP call with a WebRTC audio session
+    (`WebRtcMedia`). `CallService` is the foreground service and call
+    notification, `CallActivity` the full-screen call UI.
+  * `push/`: Firebase Cloud Messaging; an `incoming_call` data message
+    wakes the app to register so Asterisk can ring it.
+* `sip/`: plain Kotlin SIP-over-WebSocket user agent (RFC 3261 / 7118):
+  registration with digest auth, outgoing and incoming calls, cancel, hang
+  up. Media is not its job: it carries the SDP the app hands it.
+  `sip/asterisk-test/run.sh` starts an Asterisk in Docker, then
+  `cd sip && H2O_SIP_WS=ws://localhost:8088/ws ../gradlew test` runs the
+  call tests against it (CI does the same).
   * Strings in English (`values/`) and Turkish (`values-tr/`).
 
 ## Build
@@ -34,6 +47,15 @@ Needs JDK 17+ and the Android SDK (Android Studio has both).
 
 CI builds the debug APK on every pull request; download it from the run's
 **h2open-driver-debug-apk** artifact.
+
+### Push for incoming calls
+
+Put the Firebase project's `google-services.json` (Android app
+`tr.h2open.driver`) in `app/`; it is not committed. The build reads it into
+`BuildConfig`. Without it the app builds and outgoing calls work, but nothing
+wakes it for incoming calls. On the Odoo side, set the FCM project id and
+service account on the H2Open settings page (h2o_push), and the SIP domain
+and WSS URL (h2o_telephony).
 
 ## Try it against a local Odoo
 

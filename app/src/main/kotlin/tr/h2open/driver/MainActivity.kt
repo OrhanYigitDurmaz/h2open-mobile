@@ -1,17 +1,23 @@
 package tr.h2open.driver
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import tr.h2open.driver.ui.call.callPermissions
 import tr.h2open.driver.ui.login.LoginScreen
 import tr.h2open.driver.ui.stop.StopScreen
 import tr.h2open.driver.ui.theme.H2OpenTheme
@@ -36,6 +42,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun DriverNavHost() {
     val nav = rememberNavController()
+    // Ask once up front: without the notification permission an incoming call can't ring.
+    val context = LocalContext.current
+    val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
+    LaunchedEffect(Unit) {
+        val missing = callPermissions().filter { context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        if (missing.isNotEmpty()) permissions.launch(missing.toTypedArray())
+    }
     NavHost(nav, startDestination = "trips") {
         composable("trips") {
             TripsScreen(onOpenTrip = { nav.navigate("trips/$it") })

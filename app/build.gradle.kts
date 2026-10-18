@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -14,6 +16,14 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        // Push (FCM): drop the Firebase project's google-services.json into app/ (it is not committed).
+        // Without it the app still builds and calls work, but nothing wakes it for incoming calls.
+        val fcm = firebaseConfig(file("google-services.json"), "tr.h2open.driver")
+        buildConfigField("String", "FCM_APP_ID", "\"${fcm["appId"].orEmpty()}\"")
+        buildConfigField("String", "FCM_API_KEY", "\"${fcm["apiKey"].orEmpty()}\"")
+        buildConfigField("String", "FCM_PROJECT_ID", "\"${fcm["projectId"].orEmpty()}\"")
+        buildConfigField("String", "FCM_SENDER_ID", "\"${fcm["senderId"].orEmpty()}\"")
     }
 
     buildTypes {
@@ -30,6 +40,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     lint {
@@ -46,6 +57,9 @@ kotlin {
 
 dependencies {
     implementation(project(":api"))
+    implementation(project(":sip"))
+    implementation(libs.webrtc)
+    implementation(libs.firebase.messaging)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -63,4 +77,21 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+}
+
+/** The fields of google-services.json the app needs, or nothing when the file is absent. */
+fun firebaseConfig(file: File, packageName: String): Map<String, String> {
+    if (!file.exists()) return emptyMap()
+    val json = JsonSlurper().parse(file) as Map<*, *>
+    val project = json["project_info"] as Map<*, *>
+    val client = (json["client"] as List<*>).map { it as Map<*, *> }.firstOrNull {
+        val info = it["client_info"] as Map<*, *>
+        (info["android_client_info"] as Map<*, *>)["package_name"] == packageName
+    } ?: error("google-services.json has no Android app $packageName")
+    return mapOf(
+        "appId" to (client["client_info"] as Map<*, *>)["mobilesdk_app_id"].toString(),
+        "apiKey" to ((client["api_key"] as List<*>).first() as Map<*, *>)["current_key"].toString(),
+        "projectId" to project["project_id"].toString(),
+        "senderId" to project["project_number"].toString(),
+    )
 }

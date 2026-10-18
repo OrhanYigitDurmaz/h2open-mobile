@@ -2,20 +2,34 @@ package tr.h2open.driver
 
 import android.app.Application
 import android.os.Build
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import tr.h2open.driver.api.H2oApi
 import tr.h2open.driver.api.UnauthorizedException
 import tr.h2open.driver.data.Session
 import tr.h2open.driver.data.SessionStore
+import tr.h2open.driver.push.Push
+import tr.h2open.driver.voip.VoipManager
 
 class H2oApplication : Application() {
     lateinit var sessions: SessionStore
         private set
 
     private var cachedApi: Pair<String, H2oApi>? = null
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /** Calls over the office PBX. */
+    val voip: VoipManager by lazy { VoipManager(this) }
 
     override fun onCreate() {
         super.onCreate()
         sessions = SessionStore(this)
+        Push.init(this)
+        // The token may have changed while the app was not running.
+        if (sessions.session.value != null) registerPush()
     }
 
     /** API client for the signed-in server. */
@@ -40,18 +54,37 @@ class H2oApplication : Application() {
             sessions.clear()
             throw NotADriverException()
         }
-        return Session(url, user).also(sessions::signedIn)
+        return Session(url, user).also {
+            sessions.signedIn(it)
+            // A new session has no push device yet (h2o_push ties devices to sessions).
+            registerPush()
+        }
+    }
+
+    /** Tells Odoo where to push incoming calls; [token] when FCM just handed out a new one. */
+    fun registerPush(token: String? = null) {
+        if (!Push.configured) return
+        appScope.launch {
+            if (sessions.session.value == null) return@launch
+            val fcmToken = token ?: Push.token(this@H2oApplication) ?: return@launch
+            runCatching { api().registerPush(fcmToken, deviceName) }
+                .onFailure { Log.w("H2oPush", "push/register failed", it) }
+        }
     }
 
     /** Signs out on the server too when it can be reached; the local session goes either way. */
     suspend fun signOut() {
+        voip.shutdown()
         runCatching { api().logout() }
         sessions.clear()
     }
 
     /** Called when the server rejects the token: back to the login screen. */
     fun onUnauthorized(error: Throwable) {
-        if (error is UnauthorizedException) sessions.clear()
+        if (error is UnauthorizedException) {
+            voip.shutdown()
+            sessions.clear()
+        }
     }
 
     val deviceName: String get() = "${Build.MANUFACTURER} ${Build.MODEL}".trim()

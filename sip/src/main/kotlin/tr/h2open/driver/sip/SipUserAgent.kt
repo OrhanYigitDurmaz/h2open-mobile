@@ -8,11 +8,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,9 +62,12 @@ class SipUserAgent(
     private val _registration = MutableStateFlow<RegistrationState>(RegistrationState.Unregistered)
     val registration: StateFlow<RegistrationState> = _registration.asStateFlow()
 
-    private val _incomingCalls = MutableSharedFlow<SipCall>(extraBufferCapacity = 4)
-    /** New calls from the PBX, in [CallState.Incoming]. */
-    val incomingCalls: SharedFlow<SipCall> = _incomingCalls.asSharedFlow()
+    private val _incomingCalls = Channel<SipCall>(Channel.BUFFERED)
+    /**
+     * New calls from the PBX, in [CallState.Incoming]. Buffered, so a call that
+     * arrives right after [register] returns waits for its collector. One collector.
+     */
+    val incomingCalls: Flow<SipCall> = _incomingCalls.receiveAsFlow()
 
     /** RFC 7118 §5: a made-up host for our Via and Contact. */
     internal val localHost = SipMessage.randomToken(12) + ".invalid"
@@ -292,7 +294,7 @@ class SipUserAgent(
                 calls[incoming.callId] = incoming
                 respond(request, 100, "Trying")
                 incoming.ringing()
-                _incomingCalls.emit(incoming)
+                _incomingCalls.send(incoming)
             } else {
                 call.onReInvite(request)
             }

@@ -241,3 +241,17 @@ data class PushRegisterRequest(
 
 @Serializable
 data class PushUnregisterRequest(val token: String)
+
+/** Short-lived SIP login from `POST sip/credentials`; asking again replaces the password. */
+@Serializable
+data class SipCredentials(
+    val username: String,
+    val password: String,
+    @Serializable(with = OdooStringSerializer::class) val domain: String? = null,
+    @SerialName("wss_url") @Serializable(with = OdooStringSerializer::class) val wssUrl: String? = null,
+    @SerialName("expires_at") @Serializable(with = OdooStringSerializer::class) val expiresAt: String? = null,
+) {
+    /** [expiresAt] (`2026-10-18T22:00:00Z`) in epoch millis, or null. */
+    val expiresAtMillis: Long?
+        get() = expiresAt?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+}

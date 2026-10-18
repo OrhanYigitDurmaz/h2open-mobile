@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Add
@@ -66,6 +67,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.launch
 import tr.h2open.driver.H2oApplication
 import tr.h2open.driver.R
+import tr.h2open.driver.ui.call.rememberVoipCall
 import tr.h2open.driver.api.DeliverRequest
 import tr.h2open.driver.api.DeliveredLine
 import tr.h2open.driver.api.FailureReason
@@ -236,6 +238,7 @@ fun StopScreen(onBack: () -> Unit, vm: StopViewModel = viewModel(factory = StopV
 @Composable
 private fun CustomerCard(stop: Stop) {
     val context = LocalContext.current
+    val voipCall = rememberVoipCall()
     val partner = stop.partner
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -259,9 +262,13 @@ private fun CustomerCard(stop: Stop) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (partner.phone.isNotBlank()) {
-                    OutlinedButton(onClick = { dial(context, partner.phone) }) {
+                    // Through the office line, so the customer sees the company number.
+                    OutlinedButton(onClick = { voipCall(partner.phone, partner.name) }) {
                         Icon(Icons.Filled.Call, contentDescription = null)
                         Text(stringResource(R.string.stop_call), Modifier.padding(start = 8.dp))
+                    }
+                    IconButton(onClick = { dial(context, partner.phone) }) {
+                        Icon(Icons.Filled.Dialpad, contentDescription = stringResource(R.string.stop_call_phone))
                     }
                 }
                 OutlinedButton(onClick = { navigate(context, partner) }) {
