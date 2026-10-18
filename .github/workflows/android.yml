@@ -10,6 +10,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  sip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Start Asterisk with SIP over WebSocket
+        run: sip/asterisk-test/run.sh
+      - name: SIP client tests against Asterisk
+        working-directory: sip
+        env:
+          H2O_SIP_WS: ws://localhost:8088/ws
+        run: ../gradlew --no-configuration-cache test
+      - name: Asterisk log
+        if: failure()
+        run: docker logs h2o-asterisk-test
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30

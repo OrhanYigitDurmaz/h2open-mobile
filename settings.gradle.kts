@@ -18,3 +18,4 @@ rootProject.name = "h2open-driver"
 
 include(":app")
 include(":api")
+include(":sip")
