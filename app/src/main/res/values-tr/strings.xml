@@ -61,6 +61,7 @@
     <string name="stop_elevator_no">asansör yok</string>
     <string name="stop_elevator_yes">asansör var</string>
     <string name="stop_empties">Alınan boş damacana</string>
+    <string name="stop_empties_expected">Toplanacak boş: %1$d</string>
     <string name="stop_empties_collected">Alınan boş: %1$d</string>
     <string name="stop_fail">Teslim edilemedi</string>
     <string name="stop_fail_title">Neden teslim edilemedi?</string>

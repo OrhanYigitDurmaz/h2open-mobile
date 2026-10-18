@@ -130,7 +130,7 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
     private fun prefill(stop: Stop) {
         quantities.clear()
         stop.lines.forEach { quantities[it.productId] = it.qtyPlanned }
-        empties = stop.order?.emptiesExpected ?: 0
+        empties = stop.emptiesExpected
         paymentMethod = stop.paymentMethod
             ?: stop.paymentMode?.takeIf { it in PaymentMethod.all }
             ?: if (stop.amountDue > 0) PaymentMethod.CASH else PaymentMethod.NONE
@@ -254,6 +254,9 @@ private fun CustomerCard(stop: Stop) {
                 Text(it.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
             }
             Text(stringResource(R.string.stop_bottle_balance, partner.bottleBalance), style = MaterialTheme.typography.bodyMedium)
+            if (stop.isPending && stop.emptiesExpected > 0) {
+                Text(stringResource(R.string.stop_empties_expected, stop.emptiesExpected), style = MaterialTheme.typography.titleSmall)
+            }
             if (stop.amountDue > 0) {
                 Text(stringResource(R.string.stop_amount_due, formatMoney(stop.amountDue, stop.currency)), style = MaterialTheme.typography.titleSmall)
             }
@@ -309,7 +312,7 @@ private fun DeliveryForm(stop: Stop, vm: StopViewModel) {
             onChange = { vm.quantities[line.productId] = it },
         )
     }
-    if (stop.emptiesProductId != null || (stop.order?.emptiesExpected ?: 0) > 0) {
+    if (stop.emptiesProductId != null || stop.emptiesExpected > 0) {
         Stepper(
             label = stringResource(R.string.stop_empties),
             value = vm.empties.toDouble(),

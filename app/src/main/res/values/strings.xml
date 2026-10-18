@@ -61,6 +61,7 @@
     <string name="stop_elevator_no">no elevator</string>
     <string name="stop_elevator_yes">elevator</string>
     <string name="stop_empties">Empties collected</string>
+    <string name="stop_empties_expected">Empties to collect: %1$d</string>
     <string name="stop_empties_collected">Empties collected: %1$d</string>
     <string name="stop_fail">Couldn\'t deliver</string>
     <string name="stop_fail_title">Why couldn\'t you deliver?</string>
