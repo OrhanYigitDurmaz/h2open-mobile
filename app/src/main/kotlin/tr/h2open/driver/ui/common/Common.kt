@@ -33,7 +33,8 @@ fun errorText(error: Throwable): String = when (error) {
         404 -> stringResource(R.string.error_not_found)
         else -> error.message ?: stringResource(R.string.error_unknown)
     }
-    is IOException -> stringResource(R.string.error_network)
+    // The cause helps tell a wrong address from a blocked port or HTTP being refused.
+    is IOException -> stringResource(R.string.error_network) + "\n\n" + (error.message ?: error.javaClass.simpleName)
     else -> error.message ?: stringResource(R.string.error_unknown)
 }
 

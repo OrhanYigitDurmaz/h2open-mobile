@@ -132,6 +132,10 @@ class H2oApiTest {
     fun `base url is normalized`() {
         assertEquals("https://odoo.h2open.com.tr/", H2oApi.normalizeBaseUrl(" odoo.h2open.com.tr "))
         assertEquals("http://10.0.2.2:8069/", H2oApi.normalizeBaseUrl("http://10.0.2.2:8069"))
+        assertEquals("http://192.168.12.1:8069/", H2oApi.normalizeBaseUrl("192.168.12.1:8069"))
+        assertEquals("http://localhost:8069/", H2oApi.normalizeBaseUrl("localhost:8069"))
+        assertEquals("https://8.8.8.8/", H2oApi.normalizeBaseUrl("8.8.8.8"))
+        assertEquals("HTTPS://Odoo.example.com/", H2oApi.normalizeBaseUrl("HTTPS://Odoo.example.com"))
     }
 
     companion object {
