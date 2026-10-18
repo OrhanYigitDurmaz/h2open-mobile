@@ -23,6 +23,14 @@ jobs:
                    androidx/compose/material/material-icons-extended androidx/compose/material3/material3; do
             echo "$m: $(curl -s https://dl.google.com/android/maven2/$m/maven-metadata.xml | grep -o '<version>[^<]*' | sed 's/<version>//' | tail -12 | tr '\n' ' ')"
           done
+      - name: Firebase messaging 26 API
+        run: |
+          mkdir -p /tmp/fm && cd /tmp/fm
+          curl -sSfLo fm.aar https://dl.google.com/android/maven2/com/google/firebase/firebase-messaging/26.0.0/firebase-messaging-26.0.0.aar
+          unzip -oq fm.aar classes.jar
+          for c in com.google.firebase.messaging.FirebaseMessaging com.google.firebase.messaging.FirebaseMessagingService; do
+            javap -v -cp classes.jar "$c" | grep -E "^  (public|protected).*\(|Deprecated: true" || true
+          done
       - name: Compiler and Gradle warnings
         run: |
           ./gradlew --no-configuration-cache --console=plain --warning-mode all :app:compileDebugKotlin :app:compileDebugUnitTestKotlin 2>&1 | grep -E "^[ew]: |[Ww]arning|deprecat|FAIL|What went wrong" -A3 || true
