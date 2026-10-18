@@ -60,6 +60,8 @@ dependencies {
     implementation(project(":sip"))
     implementation(libs.webrtc)
     implementation(libs.firebase.messaging)
+    // Firebase (via Play services) pulls in fragment 1.1, too old for the ActivityResult APIs.
+    implementation(libs.androidx.fragment)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
