@@ -65,3 +65,8 @@ fun formatMoney(amount: Double, currency: String): String {
 /** 2.0 → "2", 1.5 → "1.5". */
 fun formatQty(qty: Double): String =
     if (qty == Math.floor(qty)) qty.toLong().toString() else qty.toString()
+
+/** "2026-10-18" → "18 Eki 2026" in the phone's language; anything unparsable as it came. */
+fun formatDate(iso: String): String = runCatching {
+    java.time.LocalDate.parse(iso).format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM))
+}.getOrDefault(iso)

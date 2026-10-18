@@ -30,6 +30,8 @@
     <string name="call_waking">Gelen arama bağlanıyor…</string>
     <string name="channel_calls_incoming">Gelen aramalar</string>
     <string name="channel_calls_ongoing">Süren aramalar</string>
+    <string name="channel_orders">Yeni siparişler</string>
+    <string name="channel_orders_description">Alabileceğiniz yeni bir sipariş geldi.</string>
     <string name="error_network">Sunucuya ulaşılamıyor. Bağlantıyı kontrol edip tekrar deneyin.</string>
     <string name="error_not_driver">Bu hesap şoför olarak tanımlı değil.</string>
     <string name="error_not_found">Bu sefer veya durak artık size ait değil.</string>
@@ -46,6 +48,18 @@
     <string name="login_submit">Giriş yap</string>
     <string name="login_subtitle">Odoo hesabınızla giriş yapın.</string>
     <string name="login_user">Kullanıcı adı</string>
+    <string name="order_notification_title">Yeni sipariş: %1$s</string>
+    <string name="orders_already_taken">Bu siparişi başka bir şoför aldı.</string>
+    <string name="orders_claim">Ben götürürüm</string>
+    <string name="orders_claim_text">%1$s bugünkü seferinize eklenecek.</string>
+    <string name="orders_claim_title">Bu siparişi alıyor musunuz?</string>
+    <string name="orders_claimed">%1$s seferinize eklendi.</string>
+    <string name="orders_claiming">Alınıyor…</string>
+    <string name="orders_delivery_date">Teslim %1$s</string>
+    <string name="orders_empty">Şu an bekleyen sipariş yok.</string>
+    <string name="orders_my_zone">Sizin bölgeniz</string>
+    <string name="orders_open_trip">Sefere git</string>
+    <string name="orders_title">Bekleyen siparişler</string>
     <string name="payment_account">Cari hesap</string>
     <string name="payment_card">Kart</string>
     <string name="payment_cash">Nakit</string>
@@ -69,6 +83,9 @@
     <string name="stop_navigate">Yol tarifi</string>
     <string name="stop_note">Not</string>
     <string name="stop_payment">Ödeme</string>
+    <string name="stop_release">Geri bırak</string>
+    <string name="stop_release_text">Sipariş seferinizden çıkar ve herhangi bir şoförün alabilmesi için bekleyen siparişlere döner.</string>
+    <string name="stop_release_title">Bu siparişi geri bırakıyor musunuz?</string>
     <string name="stop_signature">İmza</string>
     <string name="stop_signature_hint">Müşteri buraya imzalar (isteğe bağlı)</string>
     <string name="stop_skip">Atla</string>
@@ -79,6 +96,8 @@
     <string name="stop_state_failed">Teslim edilemedi</string>
     <string name="stop_state_pending">Bekliyor</string>
     <string name="stop_state_skipped">Atlandı</string>
+    <string name="tab_orders">Siparişler</string>
+    <string name="tab_trips">Seferler</string>
     <string name="time_window_afternoon">Öğleden sonra</string>
     <string name="time_window_evening">Akşam</string>
     <string name="time_window_morning">Sabah</string>

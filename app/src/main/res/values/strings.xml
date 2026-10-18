@@ -30,6 +30,8 @@
     <string name="call_waking">Connecting an incoming call…</string>
     <string name="channel_calls_incoming">Incoming calls</string>
     <string name="channel_calls_ongoing">Ongoing calls</string>
+    <string name="channel_orders">New orders</string>
+    <string name="channel_orders_description">An order was placed that you can take.</string>
     <string name="error_network">Can\'t reach the server. Check the connection and try again.</string>
     <string name="error_not_driver">This account is not set up as a driver.</string>
     <string name="error_not_found">This trip or stop is no longer yours.</string>
@@ -46,6 +48,18 @@
     <string name="login_submit">Sign in</string>
     <string name="login_subtitle">Sign in with your Odoo account.</string>
     <string name="login_user">User name</string>
+    <string name="order_notification_title">New order: %1$s</string>
+    <string name="orders_already_taken">Another driver already took this order.</string>
+    <string name="orders_claim">I\'ll deliver it</string>
+    <string name="orders_claim_text">%1$s goes on your trip for today.</string>
+    <string name="orders_claim_title">Take this order?</string>
+    <string name="orders_claimed">%1$s is on your trip now.</string>
+    <string name="orders_claiming">Taking…</string>
+    <string name="orders_delivery_date">Due %1$s</string>
+    <string name="orders_empty">No open orders right now.</string>
+    <string name="orders_my_zone">Your zone</string>
+    <string name="orders_open_trip">Open trip</string>
+    <string name="orders_title">Open orders</string>
     <string name="payment_account">On account</string>
     <string name="payment_card">Card</string>
     <string name="payment_cash">Cash</string>
@@ -69,6 +83,9 @@
     <string name="stop_navigate">Directions</string>
     <string name="stop_note">Note</string>
     <string name="stop_payment">Payment</string>
+    <string name="stop_release">Give back</string>
+    <string name="stop_release_text">The order leaves your trip and goes back to the open orders for any driver to take.</string>
+    <string name="stop_release_title">Give this order back?</string>
     <string name="stop_signature">Signature</string>
     <string name="stop_signature_hint">Customer signs here (optional)</string>
     <string name="stop_skip">Skip</string>
@@ -79,6 +96,8 @@
     <string name="stop_state_failed">Not delivered</string>
     <string name="stop_state_pending">Pending</string>
     <string name="stop_state_skipped">Skipped</string>
+    <string name="tab_orders">Orders</string>
+    <string name="tab_trips">Trips</string>
     <string name="time_window_afternoon">Afternoon</string>
     <string name="time_window_evening">Evening</string>
     <string name="time_window_morning">Morning</string>

@@ -161,7 +161,13 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
 
     fun skip() = act { app.api().skip(stopId) }
 
-    private fun act(call: suspend () -> Stop) {
+    /** Give back an order the driver took from the Orders tab. */
+    fun release() = act {
+        app.api().releaseStop(stopId)
+        app.onOrdersChanged()
+    }
+
+    private fun act(call: suspend () -> Unit) {
         if (busy) return
         busy = true
         viewModelScope.launch {
@@ -226,6 +232,7 @@ fun StopScreen(onBack: () -> Unit, vm: StopViewModel = viewModel(factory = StopV
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     CustomerCard(stop)
+                    if (stop.canRelease) ReleaseButton(vm)
                     when {
                         !stop.isPending -> StopResult(stop)
                         !trip.isActive -> Text(stringResource(R.string.stop_start_trip_first), style = MaterialTheme.typography.bodyLarge)
@@ -282,6 +289,27 @@ private fun CustomerCard(stop: Stop) {
                 }
             }
         }
+    }
+}
+
+/** For an order the driver took themselves: give it back to the Orders tab. */
+@Composable
+private fun ReleaseButton(vm: StopViewModel) {
+    var confirm by remember { mutableStateOf(false) }
+    TextButton(onClick = { confirm = true }, enabled = !vm.busy) { Text(stringResource(R.string.stop_release)) }
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text(stringResource(R.string.stop_release_title)) },
+            text = { Text(stringResource(R.string.stop_release_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirm = false
+                    vm.release()
+                }) { Text(stringResource(R.string.stop_release)) }
+            },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
 }
 

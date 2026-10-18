@@ -25,7 +25,7 @@ import kotlin.coroutines.resumeWithException
 
 /**
  * An error answer from Odoo. [status] follows h2o_driver: 400 bad input,
- * 401 signed out, 403 not a driver, 404 someone else's record, 422 wrong state.
+ * 401 signed out, 403 not a driver, 404 someone else's record, 409 order already taken, 422 wrong state.
  */
 open class ApiException(val status: Int, message: String) : IOException(message)
 
@@ -96,6 +96,18 @@ class H2oApi(
 
     suspend fun reorder(tripId: Long, stopIds: List<Long>): Trip =
         post("driver/stops/reorder", ReorderRequest(tripId, stopIds), ReorderRequest.serializer(), Trip.serializer())
+
+    /** Orders waiting for a driver, by delivery date, the driver's own zones first. */
+    suspend fun openOrders(): List<OpenOrder> = get("driver/orders", ListSerializer(OpenOrder.serializer()))
+
+    /**
+     * Takes an open order: it becomes a stop on the driver's trip of today.
+     * Throws [ApiException] 409 when another driver took it first.
+     */
+    suspend fun claimOrder(orderId: Long): ClaimResult = postEmpty("driver/orders/$orderId/claim", ClaimResult.serializer())
+
+    /** Gives back an order the driver took ([Stop.claimed]); it is open again for every driver. */
+    suspend fun releaseStop(stopId: Long): Trip = postEmpty("driver/stops/$stopId/release", Trip.serializer())
 
     suspend fun position(tripId: Long, latitude: Double, longitude: Double) {
         post("driver/position", PositionRequest(latitude, longitude, tripId), PositionRequest.serializer(), JsonObject.serializer())

@@ -198,11 +198,46 @@ data class Stop(
     @SerialName("failure_note") val failureNote: String = "",
     val note: String = "",
     @SerialName("done_at") @Serializable(OdooStringSerializer::class) val doneAt: String? = null,
+    /** The driver took this order from the Orders tab, so they may give it back. */
+    val claimed: Boolean = false,
 ) {
     val isPending get() = state == StopState.PENDING
+    val canRelease get() = isPending && claimed
 
     val emptiesExpected: Int get() = stopEmptiesExpected ?: order?.emptiesExpected ?: 0
 }
+
+@Serializable
+data class OpenOrderLine(
+    @SerialName("product_id") val productId: Long,
+    @SerialName("product_name") val productName: String,
+    @SerialName("product_kind") val productKind: String? = null,
+    val uom: String = "",
+    val qty: Double = 0.0,
+)
+
+/** An order no driver has taken yet, from `GET driver/orders`. */
+@Serializable
+data class OpenOrder(
+    val id: Long,
+    val name: String,
+    @SerialName("delivery_date") @Serializable(OdooStringSerializer::class) val deliveryDate: String? = null,
+    @SerialName("time_window") val timeWindow: String = "any",
+    val zone: Ref? = null,
+    /** In a zone of the driver's own route. */
+    @SerialName("my_zone") val myZone: Boolean = false,
+    val partner: Partner,
+    val note: String = "",
+    @SerialName("empties_expected") val emptiesExpected: Int = 0,
+    @SerialName("payment_mode") val paymentMode: String? = null,
+    @SerialName("amount_total") val amountTotal: Double = 0.0,
+    val currency: String = "TRY",
+    val lines: List<OpenOrderLine> = emptyList(),
+)
+
+/** Answer of `POST driver/orders/<id>/claim`: the trip the order went on and its new stop. */
+@Serializable
+data class ClaimResult(val trip: Trip, val stop: Stop)
 
 @Serializable
 data class DeliveredLine(
