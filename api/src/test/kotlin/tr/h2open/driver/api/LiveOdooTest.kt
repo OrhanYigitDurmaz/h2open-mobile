@@ -2,6 +2,7 @@ package tr.h2open.driver.api
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -19,8 +20,8 @@ class LiveOdooTest {
     @Test
     fun `drive a trip from login to close`() = runTest {
         assumeTrue("H2O_IT_URL not set", url != null)
-        var token: String? = null
-        val api = H2oApi(url!!, { token })
+        val store = MemoryTokenStore()
+        val api = H2oApi(url!!, store)
 
         try {
             api.login("driver", "wrong", "test")
@@ -29,10 +30,24 @@ class LiveOdooTest {
             assertTrue(e.message!!.isNotBlank())
         }
 
-        val login = api.login("driver", "driver", "LiveOdooTest")
-        token = login.token
-        assertTrue(login.user.isDriver)
+        val user = api.login("driver", "driver", "LiveOdooTest")
+        assertTrue(user.isDriver)
+        val firstTokens = store.tokens!!
         assertEquals("driver", api.me().login)
+
+        if (firstTokens.refreshToken != null) {
+            // Access token about to run out on our side: refreshed before the call.
+            store.tokens = firstTokens.copy(accessExpiresAtMillis = 0)
+            assertEquals("driver", api.me().login)
+            val refreshed = store.tokens!!
+            assertNotEquals(firstTokens.accessToken, refreshed.accessToken)
+            assertNotEquals(firstTokens.refreshToken, refreshed.refreshToken)
+
+            // Access token refused by the server: refreshed once, call retried.
+            store.tokens = refreshed.copy(accessToken = "not-a-key")
+            assertEquals("driver", api.me().login)
+            assertNotEquals(refreshed.refreshToken, store.tokens!!.refreshToken)
+        }
 
         val trip = api.trips(day).single { it.state == TripState.PLANNED }
         val detail = api.trip(trip.id)
@@ -90,6 +105,8 @@ class LiveOdooTest {
             throw AssertionError("expected a 401 after logout")
         } catch (_: UnauthorizedException) {
         }
+        // Logout ends the device session, refresh token included.
+        assertTrue(firstTokens.refreshToken == null || store.cleared)
     }
 
     private companion object {

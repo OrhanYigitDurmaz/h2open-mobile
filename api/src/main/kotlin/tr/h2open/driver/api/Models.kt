@@ -55,8 +55,9 @@ data class LoginRequest(
     @SerialName("device_name") val deviceName: String,
 )
 
+/** The user part of the login answer; the tokens are read as [TokenResponse]. */
 @Serializable
-data class LoginResponse(val token: String, val user: UserProfile)
+data class LoginResponse(val user: UserProfile)
 
 object TripState {
     const val PLANNED = "planned"

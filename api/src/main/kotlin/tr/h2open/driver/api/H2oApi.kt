@@ -1,6 +1,8 @@
 package tr.h2open.driver.api
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -33,22 +35,37 @@ class UnauthorizedException(message: String) : ApiException(401, message)
 /**
  * Client for the H2Open app API (`/h2o/api/v1/...`). Bodies are plain JSON
  * (Odoo `json2` routes); every route but [login] needs the bearer token.
+ *
+ * Tokens live in [tokens]. The access token is refreshed shortly before it
+ * expires, and once more when a route answers 401; when the refresh itself is
+ * refused, [tokens] is cleared and [UnauthorizedException] tells the app to
+ * show the login screen. Only one refresh runs at a time: the server treats a
+ * second use of a rotated refresh token as theft.
  */
 class H2oApi(
     baseUrl: String,
-    private val token: () -> String?,
+    private val tokens: TokenStore,
     client: OkHttpClient = defaultClient(),
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val base: HttpUrl = normalizeBaseUrl(baseUrl).toHttpUrl()
     private val http = client
+    private val refreshLock = Mutex()
 
     // ------------------------------------------------------------------
     // Session (h2o_base)
     // ------------------------------------------------------------------
 
-    suspend fun login(login: String, password: String, deviceName: String): LoginResponse =
-        post("login", LoginRequest(login, password, deviceName), LoginRequest.serializer(), LoginResponse.serializer(), auth = false)
+    /** Signs in and saves the new tokens in [tokens]. */
+    suspend fun login(login: String, password: String, deviceName: String): UserProfile {
+        val body = JSON.encodeToString(LoginRequest.serializer(), LoginRequest(login, password, deviceName))
+        val text = send(Request.Builder().url(url("login")).post(body.toRequestBody(JSON_MEDIA)), bearer = null)
+        val user = JSON.decodeFromString(LoginResponse.serializer(), text).user
+        tokens.save(JSON.decodeFromString(TokenResponse.serializer(), text).toTokens(clock()))
+        return user
+    }
 
+    /** Ends this device's session on the server. [tokens] is left for the caller to clear. */
     suspend fun logout() {
         post("logout", JsonObject(emptyMap()), JsonObject.serializer(), JsonObject.serializer())
     }
@@ -103,32 +120,65 @@ class H2oApi(
 
     private suspend fun <T> get(path: String, out: KSerializer<T>, query: Map<String, String> = emptyMap()): T {
         val url = url(path).newBuilder().apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
-        return execute(Request.Builder().url(url).get(), out, auth = true)
+        return execute(Request.Builder().url(url).get(), out)
     }
 
     private suspend fun <T> postEmpty(path: String, out: KSerializer<T>): T =
         post(path, JsonObject(emptyMap()), JsonObject.serializer(), out)
 
-    private suspend fun <B, T> post(path: String, body: B, inSer: KSerializer<B>, out: KSerializer<T>, auth: Boolean = true): T {
+    private suspend fun <B, T> post(path: String, body: B, inSer: KSerializer<B>, out: KSerializer<T>): T {
         val json = JSON.encodeToString(inSer, body).toRequestBody(JSON_MEDIA)
-        return execute(Request.Builder().url(url(path)).post(json), out, auth)
+        return execute(Request.Builder().url(url(path)).post(json), out)
     }
 
     private fun url(path: String): HttpUrl = base.resolve("h2o/api/v1/$path")!!
 
-    private suspend fun <T> execute(builder: Request.Builder, out: KSerializer<T>, auth: Boolean): T {
-        builder.header("Accept", "application/json")
-        if (auth) {
-            val bearer = token() ?: throw UnauthorizedException("Not signed in")
-            builder.header("Authorization", "Bearer $bearer")
+    /** An authenticated call: refreshes ahead of expiry, and once more on a 401. */
+    private suspend fun <T> execute(builder: Request.Builder, out: KSerializer<T>): T {
+        var current = tokens.load() ?: throw UnauthorizedException("Not signed in")
+        if (current.accessExpiresAtMillis != null && current.accessExpiresAtMillis!! - clock() < EARLY_REFRESH_MILLIS) {
+            current = refresh(current.accessToken)
         }
+        val text = try {
+            send(builder, current.accessToken)
+        } catch (e: UnauthorizedException) {
+            // Revoked or expired early (server restart, clock): one refresh, one retry.
+            send(builder, refresh(current.accessToken).accessToken)
+        }
+        return JSON.decodeFromString(out, text)
+    }
+
+    /**
+     * Swaps the refresh token for a new pair, unless another call already did
+     * since [staleAccess] was read. Clears [tokens] when the server refuses.
+     */
+    private suspend fun refresh(staleAccess: String): Tokens = refreshLock.withLock {
+        val current = tokens.load() ?: throw UnauthorizedException("Not signed in")
+        if (current.accessToken != staleAccess) return@withLock current
+        val refreshToken = current.refreshToken ?: run {
+            tokens.clear()
+            throw UnauthorizedException("Session expired")
+        }
+        val body = JSON.encodeToString(RefreshRequest.serializer(), RefreshRequest(refreshToken))
+        val text = try {
+            send(Request.Builder().url(url("token/refresh")).post(body.toRequestBody(JSON_MEDIA)), bearer = null)
+        } catch (e: UnauthorizedException) {
+            tokens.clear()
+            throw e
+        }
+        JSON.decodeFromString(TokenResponse.serializer(), text).toTokens(clock()).also(tokens::save)
+    }
+
+    private suspend fun send(builder: Request.Builder, bearer: String?): String {
+        builder.header("Accept", "application/json")
+        if (bearer != null) builder.header("Authorization", "Bearer $bearer")
         val response = http.newCall(builder.build()).await()
         val text = response.use { it.body?.string().orEmpty() }
         if (!response.isSuccessful) {
             val message = errorMessage(text) ?: response.message.ifBlank { "HTTP ${response.code}" }
             throw if (response.code == 401) UnauthorizedException(message) else ApiException(response.code, message)
         }
-        return JSON.decodeFromString(out, text)
+        return text
     }
 
     companion object {
@@ -138,6 +188,8 @@ class H2oApi(
             coerceInputValues = true
         }
         private val JSON_MEDIA = "application/json".toMediaType()
+        /** Refresh this long before the access token runs out, so a call never starts with a dying token. */
+        private const val EARLY_REFRESH_MILLIS = 5 * 60 * 1000L
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)

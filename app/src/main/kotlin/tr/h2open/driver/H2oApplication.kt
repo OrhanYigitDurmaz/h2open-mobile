@@ -24,20 +24,23 @@ class H2oApplication : Application() {
         return apiFor(url)
     }
 
+    @Synchronized
     fun apiFor(serverUrl: String): H2oApi {
         cachedApi?.let { (url, api) -> if (url == serverUrl) return api }
-        return H2oApi(serverUrl, { sessions.session.value?.token }).also { cachedApi = serverUrl to it }
+        return H2oApi(serverUrl, sessions).also { cachedApi = serverUrl to it }
     }
 
     suspend fun signIn(serverUrl: String, login: String, password: String): Session {
         val url = H2oApi.normalizeBaseUrl(serverUrl)
-        val api = H2oApi(url, { null })
-        val result = api.login(login.trim(), password, deviceName)
-        if (!result.user.isDriver) {
-            // Leave the fresh token unused; it expires on its own.
+        val api = apiFor(url)
+        val user = api.login(login.trim(), password, deviceName)
+        if (!user.isDriver) {
+            // Not a driver: end the session the login just opened.
+            runCatching { api.logout() }
+            sessions.clear()
             throw NotADriverException()
         }
-        return Session(url, result.token, result.user).also(sessions::save)
+        return Session(url, user).also(sessions::signedIn)
     }
 
     /** Signs out on the server too when it can be reached; the local session goes either way. */

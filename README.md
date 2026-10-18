@@ -15,8 +15,11 @@ Kotlin, Jetpack Compose, Material 3. Min Android 8.0 (API 26).
   kotlinx.serialization). No Android dependency: `cd api && ../gradlew test`
   builds and tests it on any JDK.
 * `app/`: the Android app.
-  * `data/SessionStore.kt`: server URL, app token (encrypted with an Android
-    Keystore key) and the driver's profile.
+  * `data/SessionStore.kt`: server URL, the access and refresh tokens
+    (encrypted with an Android Keystore key) and the driver's profile.
+    `api/H2oApi.kt` refreshes the access token before it expires and once on
+    a 401, one refresh at a time; a refused refresh goes back to the login
+    screen. Drivers who use the app at least every 90 days stay signed in.
   * `ui/login`, `ui/trips`, `ui/trip`, `ui/stop`: one screen each.
   * Strings in English (`values/`) and Turkish (`values-tr/`).
 

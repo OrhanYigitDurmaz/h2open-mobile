@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import tr.h2open.driver.api.H2oApi
+import tr.h2open.driver.api.TokenStore
+import tr.h2open.driver.api.Tokens
 import tr.h2open.driver.api.UserProfile
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -16,47 +18,71 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** A signed-in driver: the Odoo server, its app token and the profile it returned. */
-data class Session(val serverUrl: String, val token: String, val user: UserProfile)
+/** A signed-in driver: the Odoo server and the profile it returned. */
+data class Session(val serverUrl: String, val user: UserProfile)
 
 /**
- * Keeps the session across restarts. The token is encrypted with a key that
- * never leaves the Android Keystore, so a copy of the app's files is useless.
+ * Keeps the session and its tokens across restarts. The tokens are encrypted
+ * with a key that never leaves the Android Keystore, so a copy of the app's
+ * files is useless. [clear] (signing out, or the server refusing a refresh)
+ * sends the app back to the login screen.
  */
-class SessionStore(context: Context) {
+class SessionStore(context: Context) : TokenStore {
     private val prefs = context.getSharedPreferences("session", Context.MODE_PRIVATE)
 
-    private val _session = MutableStateFlow(load())
+    private val _session = MutableStateFlow(loadSession())
     val session: StateFlow<Session?> = _session.asStateFlow()
 
     /** The last server signed in to, prefilled on the login screen. */
     val lastServerUrl: String get() = prefs.getString(KEY_SERVER, null).orEmpty()
 
-    fun save(session: Session) {
+    /** Called after a successful login, once [save] stored its tokens. */
+    fun signedIn(session: Session) {
         prefs.edit {
             putString(KEY_SERVER, session.serverUrl)
-            putString(KEY_TOKEN, encrypt(session.token))
             putString(KEY_USER, H2oApi.JSON.encodeToString(UserProfile.serializer(), session.user))
         }
         _session.value = session
     }
 
-    /** Forgets the token (the server URL stays for the next sign-in). */
-    fun clear() {
-        prefs.edit {
-            remove(KEY_TOKEN)
-            remove(KEY_USER)
+    @Synchronized
+    override fun load(): Tokens? {
+        val access = prefs.getString(KEY_ACCESS, null)?.let(::decrypt) ?: return null
+        return Tokens(
+            accessToken = access,
+            refreshToken = prefs.getString(KEY_REFRESH, null)?.let(::decrypt),
+            accessExpiresAtMillis = prefs.getLong(KEY_ACCESS_EXPIRES, 0).takeIf { it > 0 },
+            refreshExpiresAtMillis = prefs.getLong(KEY_REFRESH_EXPIRES, 0).takeIf { it > 0 },
+        )
+    }
+
+    /** Written synchronously: a rotated refresh token must not be lost if the app dies right after. */
+    @Synchronized
+    override fun save(tokens: Tokens) {
+        prefs.edit(commit = true) {
+            putString(KEY_ACCESS, encrypt(tokens.accessToken))
+            tokens.refreshToken?.let { putString(KEY_REFRESH, encrypt(it)) } ?: remove(KEY_REFRESH)
+            putLong(KEY_ACCESS_EXPIRES, tokens.accessExpiresAtMillis ?: 0)
+            putLong(KEY_REFRESH_EXPIRES, tokens.refreshExpiresAtMillis ?: 0)
+        }
+    }
+
+    /** Forgets the tokens and the user (the server URL stays for the next sign-in). */
+    @Synchronized
+    override fun clear() {
+        prefs.edit(commit = true) {
+            listOf(KEY_ACCESS, KEY_REFRESH, KEY_ACCESS_EXPIRES, KEY_REFRESH_EXPIRES, KEY_USER, KEY_LEGACY_TOKEN).forEach { remove(it) }
         }
         _session.value = null
     }
 
-    private fun load(): Session? {
+    private fun loadSession(): Session? {
         val server = prefs.getString(KEY_SERVER, null) ?: return null
-        val token = prefs.getString(KEY_TOKEN, null)?.let(::decrypt) ?: return null
+        if (load() == null) return null
         val user = prefs.getString(KEY_USER, null)?.let {
             runCatching { H2oApi.JSON.decodeFromString(UserProfile.serializer(), it) }.getOrNull()
         } ?: return null
-        return Session(server, token, user)
+        return Session(server, user)
     }
 
     private fun key(): SecretKey {
@@ -92,7 +118,12 @@ class SessionStore(context: Context) {
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_SIZE = 12
         const val KEY_SERVER = "server_url"
-        const val KEY_TOKEN = "token"
+        const val KEY_ACCESS = "access_token"
+        const val KEY_REFRESH = "refresh_token"
+        const val KEY_ACCESS_EXPIRES = "access_expires_at"
+        const val KEY_REFRESH_EXPIRES = "refresh_expires_at"
+        /** The single token of the first test builds: dropped, those installs sign in again. */
+        const val KEY_LEGACY_TOKEN = "token"
         const val KEY_USER = "user"
     }
 }

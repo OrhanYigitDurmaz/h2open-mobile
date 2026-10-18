@@ -14,14 +14,14 @@ import org.junit.Test
 
 class H2oApiTest {
     private lateinit var server: MockWebServer
-    private var token: String? = "secret"
+    private val store = MemoryTokenStore(Tokens("secret", null, null, null))
     private lateinit var api: H2oApi
 
     @Before
     fun setUp() {
         server = MockWebServer()
         server.start()
-        api = H2oApi(server.url("/").toString(), { token })
+        api = H2oApi(server.url("/").toString(), store)
     }
 
     @After
@@ -34,10 +34,11 @@ class H2oApiTest {
     fun `login posts credentials without a token`() = runTest {
         server.enqueue(json("""{"token": "abc", "user": {"id": 7, "name": "Ali", "login": "ali",
             "lang": "tr_TR", "tz": false, "company": {"id": 1, "name": "H2Open"}, "roles": ["driver"]}}"""))
-        val res = api.login("ali", "pw", "Pixel 8")
-        assertEquals("abc", res.token)
-        assertTrue(res.user.isDriver)
-        assertNull(res.user.tz)
+        val user = api.login("ali", "pw", "Pixel 8")
+        // An older server: one key, nothing to refresh with.
+        assertEquals(Tokens("abc", null, null, null), store.tokens)
+        assertTrue(user.isDriver)
+        assertNull(user.tz)
 
         val req = server.takeRequest()
         assertEquals("/h2o/api/v1/login", req.path)
@@ -112,15 +113,21 @@ class H2oApiTest {
         assertNull(H2oApi.errorMessage(""))
     }
 
-    @Test(expected = UnauthorizedException::class)
-    fun `401 means signed out`() = runTest {
+    @Test
+    fun `401 without a refresh token means signed out`() = runTest {
         server.enqueue(json("""{"message": "Invalid apikey"}""", code = 401))
-        api.trips()
+        try {
+            api.trips()
+            fail("expected UnauthorizedException")
+        } catch (_: UnauthorizedException) {
+        }
+        assertTrue(store.cleared)
+        assertEquals(1, server.requestCount)
     }
 
     @Test(expected = UnauthorizedException::class)
     fun `no token never calls the server`() = runTest {
-        token = null
+        store.tokens = null
         try {
             api.trips()
         } finally {
