@@ -10,6 +10,8 @@ java {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        // Warnings fail the build, so deprecations get fixed when they appear.
+        allWarningsAsErrors.set(true)
     }
 }
 

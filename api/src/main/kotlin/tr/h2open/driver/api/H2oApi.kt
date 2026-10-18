@@ -142,7 +142,8 @@ class H2oApi(
     /** An authenticated call: refreshes ahead of expiry, and once more on a 401. */
     private suspend fun <T> execute(builder: Request.Builder, out: KSerializer<T>): T {
         var current = tokens.load() ?: throw UnauthorizedException("Not signed in")
-        if (current.accessExpiresAtMillis != null && current.accessExpiresAtMillis!! - clock() < EARLY_REFRESH_MILLIS) {
+        val expiresAt = current.accessExpiresAtMillis
+        if (expiresAt != null && expiresAt - clock() < EARLY_REFRESH_MILLIS) {
             current = refresh(current.accessToken)
         }
         val text = try {
@@ -179,7 +180,7 @@ class H2oApi(
         builder.header("Accept", "application/json")
         if (bearer != null) builder.header("Authorization", "Bearer $bearer")
         val response = http.newCall(builder.build()).await()
-        val text = response.use { it.body?.string().orEmpty() }
+        val text = response.use { it.body.string() }
         if (!response.isSuccessful) {
             val message = errorMessage(text) ?: response.message.ifBlank { "HTTP ${response.code}" }
             throw if (response.code == 401) UnauthorizedException(message) else ApiException(response.code, message)

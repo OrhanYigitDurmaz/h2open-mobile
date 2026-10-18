@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import tr.h2open.driver.R
 import java.io.ByteArrayOutputStream
 
@@ -49,7 +50,7 @@ class SignatureState {
     /** Black strokes on white, base64 PNG, or null when nothing was drawn. */
     fun toBase64Png(): String? {
         if (isEmpty || size.width == 0 || size.height == 0) return null
-        val bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(size.width, size.height)
         val canvas = android.graphics.Canvas(bitmap)
         canvas.drawColor(android.graphics.Color.WHITE)
         val paint = Paint().apply {

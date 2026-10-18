@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
       - uses: gradle/actions/setup-gradle@v6
       - name: Latest Google Maven versions
         run: |
@@ -25,8 +25,8 @@ jobs:
           done
       - name: Compiler and Gradle warnings
         run: |
-          ./gradlew --no-configuration-cache --console=plain --warning-mode all :app:compileDebugKotlin :app:compileDebugUnitTestKotlin 2>&1 | grep -E "^w: |warning|deprecat" || true
+          ./gradlew --no-configuration-cache --console=plain --warning-mode all :app:compileDebugKotlin :app:compileDebugUnitTestKotlin 2>&1 | grep -E "^[ew]: |[Ww]arning|deprecat|FAIL|What went wrong" -A3 || true
       - name: Lint report
         run: |
-          ./gradlew :app:lintDebug || true
+          ./gradlew --console=plain :app:lintDebug 2>&1 | tail -30 || true
           cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt || find app/build -name "lint-results*.txt" -exec cat {} \;

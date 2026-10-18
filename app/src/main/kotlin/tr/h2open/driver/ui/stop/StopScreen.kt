@@ -19,11 +19,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -45,6 +45,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -67,7 +69,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.launch
 import tr.h2open.driver.H2oApplication
 import tr.h2open.driver.R
-import tr.h2open.driver.ui.call.rememberVoipCall
 import tr.h2open.driver.api.DeliverRequest
 import tr.h2open.driver.api.DeliveredLine
 import tr.h2open.driver.api.FailureReason
@@ -75,6 +76,7 @@ import tr.h2open.driver.api.Partner
 import tr.h2open.driver.api.PaymentMethod
 import tr.h2open.driver.api.Stop
 import tr.h2open.driver.api.Trip
+import tr.h2open.driver.ui.call.rememberVoipCall
 import tr.h2open.driver.ui.common.ErrorBox
 import tr.h2open.driver.ui.common.Load
 import tr.h2open.driver.ui.common.LoadingBox
@@ -102,7 +104,7 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
 
     // The delivery form, filled with what was planned.
     val quantities = mutableStateMapOf<Long, Double>()
-    var empties by mutableStateOf(0)
+    var empties by mutableIntStateOf(0)
     var paymentMethod by mutableStateOf(PaymentMethod.NONE)
     /** Blank means "the amount due", computed by Odoo. */
     var paymentAmount by mutableStateOf("")
@@ -442,7 +444,7 @@ private fun FailDialog(onDismiss: () -> Unit, onConfirm: (reason: String, note: 
 
 private fun dial(context: Context, phone: String) {
     val number = phone.filter { it.isDigit() || it == '+' }
-    context.startSafely(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")))
+    context.startSafely(Intent(Intent.ACTION_DIAL, "tel:$number".toUri()))
 }
 
 /** Opens the maps app on the customer's pin, or on the address when there is none. */
@@ -452,7 +454,7 @@ private fun navigate(context: Context, partner: Partner) {
     } else {
         "geo:0,0?q=${Uri.encode(partner.address)}"
     }
-    context.startSafely(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
+    context.startSafely(Intent(Intent.ACTION_VIEW, uri.toUri()))
 }
 
 private fun Context.startSafely(intent: Intent) {
