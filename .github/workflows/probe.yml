@@ -24,7 +24,8 @@ jobs:
             echo "$m: $(curl -s https://dl.google.com/android/maven2/$m/maven-metadata.xml | grep -o '<version>[^<]*' | sed 's/<version>//' | tail -12 | tr '\n' ' ')"
           done
       - name: Compiler and Gradle warnings
-        run: ./gradlew --no-configuration-cache --warning-mode all :app:compileDebugKotlin :api:compileTestKotlin :sip:compileTestKotlin 2>&1 | grep -E "^w: |warning|deprecat" || true
+        run: |
+          ./gradlew --no-configuration-cache --console=plain --warning-mode all :app:compileDebugKotlin :app:compileDebugUnitTestKotlin 2>&1 | grep -E "^w: |warning|deprecat" || true
       - name: Lint report
         run: |
           ./gradlew :app:lintDebug || true
