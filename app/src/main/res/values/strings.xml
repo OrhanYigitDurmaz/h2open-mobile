@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">H2Open Driver</string>
     <string name="action_back">Back</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_clear">Clear</string>
@@ -8,6 +7,29 @@
     <string name="action_increase">More</string>
     <string name="action_retry">Try again</string>
     <string name="action_sign_out">Sign out</string>
+    <string name="app_name">H2Open Driver</string>
+    <string name="call_active">On call</string>
+    <string name="call_answer">Answer</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="call_busy">Busy</string>
+    <string name="call_caller_hung_up">The caller hung up</string>
+    <string name="call_connecting">Connecting…</string>
+    <string name="call_connection_lost">Connection lost</string>
+    <string name="call_decline">Decline</string>
+    <string name="call_declined">Declined</string>
+    <string name="call_ended">Call ended</string>
+    <string name="call_failed">The call could not be made.</string>
+    <string name="call_hang_up">Hang up</string>
+    <string name="call_incoming">Incoming call</string>
+    <string name="call_mute">Mute</string>
+    <string name="call_no_answer">No answer</string>
+    <string name="call_not_found">This number can\'t be reached.</string>
+    <string name="call_not_set_up">Calling is not set up for your account yet.</string>
+    <string name="call_ringing">Ringing…</string>
+    <string name="call_speaker">Speaker</string>
+    <string name="call_waking">Connecting an incoming call…</string>
+    <string name="channel_calls_incoming">Incoming calls</string>
+    <string name="channel_calls_ongoing">Ongoing calls</string>
     <string name="error_network">Can\'t reach the server. Check the connection and try again.</string>
     <string name="error_not_driver">This account is not set up as a driver.</string>
     <string name="error_not_found">This trip or stop is no longer yours.</string>
@@ -33,11 +55,13 @@
     <string name="stop_amount_hint">Leave empty to collect the amount due.</string>
     <string name="stop_bottle_balance">Bottles at the customer: %1$d</string>
     <string name="stop_call">Call</string>
+    <string name="stop_call_phone">Call from the phone</string>
     <string name="stop_deliver">Delivered</string>
     <string name="stop_deliver_title">Delivery</string>
     <string name="stop_elevator_no">no elevator</string>
     <string name="stop_elevator_yes">elevator</string>
     <string name="stop_empties">Empties collected</string>
+    <string name="stop_empties_expected">Empties to collect: %1$d</string>
     <string name="stop_empties_collected">Empties collected: %1$d</string>
     <string name="stop_fail">Couldn\'t deliver</string>
     <string name="stop_fail_title">Why couldn\'t you deliver?</string>

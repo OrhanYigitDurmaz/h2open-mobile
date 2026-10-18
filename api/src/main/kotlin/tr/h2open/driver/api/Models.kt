@@ -180,6 +180,8 @@ data class Stop(
     val lines: List<StopLine> = emptyList(),
     @SerialName("empties_product_id") val emptiesProductId: Long? = null,
     @SerialName("empties_collected") val emptiesCollected: Int = 0,
+    /** Empties to pick up here; older servers only have it on the order. */
+    @SerialName("empties_expected") private val stopEmptiesExpected: Int? = null,
     @SerialName("payment_mode") val paymentMode: String? = null,
     @SerialName("payment_method") @Serializable(OdooStringSerializer::class) val paymentMethod: String? = null,
     @SerialName("amount_due") val amountDue: Double = 0.0,
@@ -191,6 +193,8 @@ data class Stop(
     @SerialName("done_at") @Serializable(OdooStringSerializer::class) val doneAt: String? = null,
 ) {
     val isPending get() = state == StopState.PENDING
+
+    val emptiesExpected: Int get() = stopEmptiesExpected ?: order?.emptiesExpected ?: 0
 }
 
 @Serializable
@@ -241,3 +245,17 @@ data class PushRegisterRequest(
 
 @Serializable
 data class PushUnregisterRequest(val token: String)
+
+/** Short-lived SIP login from `POST sip/credentials`; asking again replaces the password. */
+@Serializable
+data class SipCredentials(
+    val username: String,
+    val password: String,
+    @Serializable(with = OdooStringSerializer::class) val domain: String? = null,
+    @SerialName("wss_url") @Serializable(with = OdooStringSerializer::class) val wssUrl: String? = null,
+    @SerialName("expires_at") @Serializable(with = OdooStringSerializer::class) val expiresAt: String? = null,
+) {
+    /** [expiresAt] (`2026-10-18T22:00:00Z`) in epoch millis, or null. */
+    val expiresAtMillis: Long?
+        get() = expiresAt?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+}

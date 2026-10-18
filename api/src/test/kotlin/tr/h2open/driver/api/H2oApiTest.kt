@@ -66,6 +66,31 @@ class H2oApiTest {
     }
 
     @Test
+    fun `stop empties expected wins over the order's`() = runTest {
+        server.enqueue(json(TRIP_DETAIL.replace("\"empties_collected\": 0,", "\"empties_collected\": 0, \"empties_expected\": 5,")))
+        assertEquals(5, api.trip(3).stops.single().emptiesExpected)
+    }
+
+    @Test
+    fun `sip credentials`() = runTest {
+        server.enqueue(json("""{"username": "1001", "password": "pw", "domain": "pbx.h2open.com.tr",
+            "wss_url": "wss://vps.h2open.com.tr/ws", "expires_at": "2026-10-18T22:00:00Z", "ice_servers": []}"""))
+        val creds = api.sipCredentials()
+        assertEquals("wss://vps.h2open.com.tr/ws", creds.wssUrl)
+        assertEquals(java.time.Instant.parse("2026-10-18T22:00:00Z").toEpochMilli(), creds.expiresAtMillis)
+        assertEquals("POST", server.takeRequest().method)
+    }
+
+    @Test
+    fun `sip credentials with unset settings`() = runTest {
+        server.enqueue(json("""{"username": "1001", "password": "pw", "domain": false, "wss_url": false,
+            "expires_at": "2026-10-18T22:00:00Z", "ice_servers": []}"""))
+        val creds = api.sipCredentials()
+        assertNull(creds.domain)
+        assertNull(creds.wssUrl)
+    }
+
+    @Test
     fun `trip detail parses stops`() = runTest {
         server.enqueue(json(TRIP_DETAIL))
         val trip = api.trip(3)
@@ -73,6 +98,8 @@ class H2oApiTest {
         assertEquals("Moda Cad. 12, Daire 4, 34710 İstanbul", stop.partner.address)
         assertEquals(3, stop.partner.floor)
         assertEquals(2, stop.order?.emptiesExpected)
+        // No stop-level field in this payload: falls back to the order's.
+        assertEquals(2, stop.emptiesExpected)
         assertEquals(2.0, stop.lines[0].qtyPlanned, 0.0)
         assertNull(stop.paymentMethod)
         assertNull(stop.doneAt)
