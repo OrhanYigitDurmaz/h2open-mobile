@@ -45,6 +45,9 @@ jobs:
         run: ./gradlew --no-configuration-cache :api:test :app:testDebugUnitTest
       - name: Lint
         run: ./gradlew :app:lintDebug
+      - name: Lint findings
+        if: failure()
+        run: cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug
       - uses: actions/upload-artifact@v7

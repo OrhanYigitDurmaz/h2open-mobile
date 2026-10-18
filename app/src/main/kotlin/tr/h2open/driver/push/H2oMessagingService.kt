@@ -7,6 +7,8 @@ import com.google.firebase.messaging.RemoteMessage
 import tr.h2open.driver.H2oApplication
 
 /** Data messages from h2o_push: `incoming_call` and `call_cancelled` (h2o_telephony). */
+// Lint's check predates FCM's installation ID API: onRegistered replaces the deprecated onNewToken.
+@Suppress("MissingFirebaseInstanceTokenRefresh")
 class H2oMessagingService : FirebaseMessagingService() {
     private val app get() = application as H2oApplication
     private val main = Handler(Looper.getMainLooper())
