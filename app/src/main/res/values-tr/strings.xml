@@ -87,7 +87,10 @@
     <string name="trip_close">Seferi kapat</string>
     <string name="trip_close_text">Depoya döndüğünüzde seferi kapatın. Araç stoğu kapanışta sayılır.</string>
     <string name="trip_close_title">Sefer kapatılsın mı?</string>
-    <string name="trip_progress">%2$d duraktan %1$d tamamlandı</string>
+    <plurals name="trip_progress">
+        <item quantity="one">%2$d duraktan %1$d tamamlandı</item>
+        <item quantity="other">%2$d duraktan %1$d tamamlandı</item>
+    </plurals>
     <string name="trip_start">Seferi başlat</string>
     <string name="trip_state_cancelled">İptal edildi</string>
     <string name="trip_state_closed">Kapandı</string>

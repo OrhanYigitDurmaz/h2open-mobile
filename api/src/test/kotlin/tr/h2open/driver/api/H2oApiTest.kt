@@ -1,8 +1,8 @@
 package tr.h2open.driver.api
 
 import kotlinx.coroutines.test.runTest
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,10 +25,10 @@ class H2oApiTest {
     }
 
     @After
-    fun tearDown() = server.shutdown()
+    fun tearDown() = server.close()
 
     private fun json(body: String, code: Int = 200) =
-        MockResponse().setResponseCode(code).setHeader("Content-Type", "application/json").setBody(body)
+        MockResponse.Builder().code(code).setHeader("Content-Type", "application/json").body(body).build()
 
     @Test
     fun `login posts credentials without a token`() = runTest {
@@ -41,9 +41,9 @@ class H2oApiTest {
         assertNull(user.tz)
 
         val req = server.takeRequest()
-        assertEquals("/h2o/api/v1/login", req.path)
-        assertNull(req.getHeader("Authorization"))
-        assertEquals("""{"login":"ali","password":"pw","device_name":"Pixel 8"}""", req.body.readUtf8())
+        assertEquals("/h2o/api/v1/login", req.target)
+        assertNull(req.headers["Authorization"])
+        assertEquals("""{"login":"ali","password":"pw","device_name":"Pixel 8"}""", req.body!!.utf8())
     }
 
     @Test
@@ -61,8 +61,8 @@ class H2oApiTest {
 
         val req = server.takeRequest()
         assertEquals("GET", req.method)
-        assertEquals("/h2o/api/v1/driver/trips?date=2026-10-18", req.path)
-        assertEquals("Bearer secret", req.getHeader("Authorization"))
+        assertEquals("/h2o/api/v1/driver/trips?date=2026-10-18", req.target)
+        assertEquals("Bearer secret", req.headers["Authorization"])
     }
 
     @Test
@@ -115,7 +115,7 @@ class H2oApiTest {
             paymentMethod = PaymentMethod.CASH,
         ))
         assertEquals(StopState.DELIVERED, stop.state)
-        val body = server.takeRequest().body.readUtf8()
+        val body = server.takeRequest().body!!.utf8()
         assertEquals("""{"lines":[{"product_id":5,"qty_delivered":2.0}],"empties_collected":2,"payment_method":"cash"}""", body)
     }
 

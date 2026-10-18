@@ -8,6 +8,7 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -27,7 +28,7 @@ object OdooStringSerializer : KSerializer<String?> {
     }
 
     override fun serialize(encoder: Encoder, value: String?) {
-        if (value == null) encoder.encodeNull() else encoder.encodeString(value)
+        (encoder as JsonEncoder).encodeJsonElement(value?.let(::JsonPrimitive) ?: JsonNull)
     }
 }
 
@@ -96,7 +97,13 @@ data class Vehicle(
     val id: Long,
     val name: String,
     @SerialName("license_plate") @Serializable(OdooStringSerializer::class) val licensePlate: String? = null,
-)
+) {
+    /** Odoo's fleet name already starts with the plate ("34 H2O 001: Ford/Transit"); add it only when missing. */
+    val label: String get() = licensePlate
+        ?.takeIf { it.isNotBlank() && !name.contains(it) }
+        ?.let { "$it · $name" }
+        ?: name
+}
 
 @Serializable
 data class Trip(

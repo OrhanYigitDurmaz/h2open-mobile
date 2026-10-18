@@ -87,7 +87,10 @@
     <string name="trip_close">Close trip</string>
     <string name="trip_close_text">Close the trip once you are back at the depot. The vehicle stock is counted when it closes.</string>
     <string name="trip_close_title">Close the trip?</string>
-    <string name="trip_progress">%1$d of %2$d stops done</string>
+    <plurals name="trip_progress">
+        <item quantity="one">%1$d of %2$d stop done</item>
+        <item quantity="other">%1$d of %2$d stops done</item>
+    </plurals>
     <string name="trip_start">Start trip</string>
     <string name="trip_state_cancelled">Cancelled</string>
     <string name="trip_state_closed">Closed</string>

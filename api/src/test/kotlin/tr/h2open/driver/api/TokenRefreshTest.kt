@@ -3,10 +3,10 @@ package tr.h2open.driver.api
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,10 +32,10 @@ class TokenRefreshTest {
     fun setUp() {
         server = MockWebServer()
         server.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.target) {
                 "/h2o/api/v1/login" -> json("{${tokenFields("a1", "r1")}, \"user\": $USER}")
                 "/h2o/api/v1/token/refresh" -> synchronized(this) {
-                    val sent = request.body.readUtf8()
+                    val sent = request.body!!.utf8()
                     if (refreshAnswer != 200 || !sent.contains("\"$validRefresh\"")) {
                         error401("Invalid refresh token")
                     } else {
@@ -45,7 +45,7 @@ class TokenRefreshTest {
                         json("{${tokenFields(validAccess, validRefresh)}}")
                     }
                 }
-                else -> if (request.getHeader("Authorization") == "Bearer $validAccess") json(USER) else error401("Invalid apikey")
+                else -> if (request.headers["Authorization"] == "Bearer $validAccess") json(USER) else error401("Invalid apikey")
             }
         }
         server.start()
@@ -53,16 +53,16 @@ class TokenRefreshTest {
     }
 
     @After
-    fun tearDown() = server.shutdown()
+    fun tearDown() = server.close()
 
     private fun tokenFields(access: String, refresh: String) =
         """"access_token": "$access", "access_expires_in": 86400, "access_expires_at": "2026-10-19T15:48:00Z",
             "refresh_token": "$refresh", "refresh_expires_in": 7776000"""
 
-    private fun json(body: String) = MockResponse().setHeader("Content-Type", "application/json").setBody(body)
+    private fun json(body: String) = MockResponse.Builder().setHeader("Content-Type", "application/json").body(body).build()
 
-    private fun error401(message: String) = MockResponse().setResponseCode(401)
-        .setHeader("Content-Type", "application/json").setBody("""{"message": "$message"}""")
+    private fun error401(message: String) = MockResponse.Builder().code(401)
+        .setHeader("Content-Type", "application/json").body("""{"message": "$message"}""").build()
 
     @Test
     fun `login keeps both tokens with local expiry times`() = runTest {
@@ -119,7 +119,7 @@ class TokenRefreshTest {
     fun `network errors during a refresh keep the tokens`() = runTest {
         api.login("ali", "pw", "Pixel")
         now += 86_400_000
-        server.shutdown()
+        server.close()
         try {
             api.me()
             fail("expected an IOException")

@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -139,10 +140,10 @@ private fun TripCard(trip: Trip, onClick: () -> Unit) {
                 Text(tripStateLabel(trip.state), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
             trip.vehicle?.let { vehicle ->
-                Text(listOfNotNull(vehicle.licensePlate, vehicle.name).distinct().joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+                Text(vehicle.label, style = MaterialTheme.typography.bodyMedium)
             }
             val done = trip.stopCount - trip.pendingCount
-            Text(stringResource(R.string.trip_progress, done, trip.stopCount), style = MaterialTheme.typography.bodyMedium)
+            Text(pluralStringResource(R.plurals.trip_progress, trip.stopCount, done, trip.stopCount), style = MaterialTheme.typography.bodyMedium)
             if (trip.stopCount > 0) {
                 LinearProgressIndicator(progress = { done.toFloat() / trip.stopCount }, modifier = Modifier.fillMaxWidth())
             }

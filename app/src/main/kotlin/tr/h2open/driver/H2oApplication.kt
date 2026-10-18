@@ -62,12 +62,16 @@ class H2oApplication : Application() {
     }
 
     /** Tells Odoo where to push incoming calls; [token] when FCM just handed out a new one. */
-    fun registerPush(token: String? = null) {
+    /** Without [installationId], asks FCM for it; the answer calls back here with it. */
+    fun registerPush(installationId: String? = null) {
         if (!Push.configured) return
+        if (installationId == null) {
+            if (sessions.session.value != null) Push.register(this)
+            return
+        }
         appScope.launch {
             if (sessions.session.value == null) return@launch
-            val fcmToken = token ?: Push.token(this@H2oApplication) ?: return@launch
-            runCatching { api().registerPush(fcmToken, deviceName) }
+            runCatching { api().registerPush(installationId, deviceName) }
                 .onFailure { Log.w("H2oPush", "push/register failed", it) }
         }
     }

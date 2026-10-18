@@ -5,9 +5,7 @@ import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
-import kotlinx.coroutines.suspendCancellableCoroutine
 import tr.h2open.driver.BuildConfig
-import kotlin.coroutines.resume
 
 /**
  * Firebase Cloud Messaging, set up from the `google-services.json` the
@@ -30,14 +28,13 @@ object Push {
         runCatching { FirebaseApp.initializeApp(context, options) }.onFailure { Log.w(TAG, "Firebase init failed", it) }
     }
 
-    /** This install's FCM token, or null when push is off or Google Play services can't give one. */
-    suspend fun token(context: Context): String? {
-        if (!configured || FirebaseApp.getApps(context).isEmpty()) return null
-        return suspendCancellableCoroutine { cont ->
-            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                if (!task.isSuccessful) Log.w(TAG, "No FCM token", task.exception)
-                cont.resume(if (task.isSuccessful) task.result else null)
-            }
-        }
+    /**
+     * Asks FCM to register this install. The answer comes to
+     * [H2oMessagingService.onRegistered] with the install's Firebase
+     * installation ID (FID), which is what the server sends to.
+     */
+    fun register(context: Context) {
+        if (!configured || FirebaseApp.getApps(context).isEmpty()) return
+        FirebaseMessaging.getInstance().register().addOnFailureListener { Log.w(TAG, "FCM registration failed", it) }
     }
 }

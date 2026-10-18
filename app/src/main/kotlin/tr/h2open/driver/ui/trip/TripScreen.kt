@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -201,8 +202,8 @@ private fun TripContent(trip: Trip, busy: Boolean, onStart: () -> Unit, onClose:
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(tripStateLabel(trip.state), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                trip.vehicle?.let { Text(listOfNotNull(it.licensePlate, it.name).distinct().joinToString(" · ")) }
-                Text(stringResource(R.string.trip_progress, trip.stopCount - trip.pendingCount, trip.stopCount))
+                trip.vehicle?.let { Text(it.label) }
+                Text(pluralStringResource(R.plurals.trip_progress, trip.stopCount, trip.stopCount - trip.pendingCount, trip.stopCount))
                 Text(stringResource(R.string.trip_bottles, trip.plannedBottleQty))
                 if (trip.cashExpected > 0) Text(stringResource(R.string.trip_cash, formatMoney(trip.cashExpected, trip.currency)))
                 if (trip.note.isNotBlank()) Text(trip.note, style = MaterialTheme.typography.bodyMedium)

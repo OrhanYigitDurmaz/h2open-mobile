@@ -35,7 +35,8 @@ fun errorText(error: Throwable): String = when (error) {
     }
     // The cause helps tell a wrong address from a blocked port or HTTP being refused.
     is IOException -> stringResource(R.string.error_network) + "\n\n" + (error.message ?: error.javaClass.simpleName)
-    else -> error.message ?: stringResource(R.string.error_unknown)
+    // Unexpected: name the exception so a screenshot says what broke.
+    else -> stringResource(R.string.error_unknown) + "\n\n" + (error.message ?: error.javaClass.simpleName)
 }
 
 @Composable

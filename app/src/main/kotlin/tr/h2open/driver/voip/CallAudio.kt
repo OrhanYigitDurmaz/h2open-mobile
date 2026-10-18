@@ -6,6 +6,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 
 enum class AudioRoute { Earpiece, Speaker, Bluetooth }
 
@@ -66,7 +67,7 @@ class CallAudio(context: Context) {
         return listOfNotNull(
             AudioRoute.Earpiece.takeIf { AudioDeviceInfo.TYPE_BUILTIN_EARPIECE in types || AudioDeviceInfo.TYPE_WIRED_HEADSET in types },
             AudioRoute.Speaker,
-            AudioRoute.Bluetooth.takeIf { types.any { it in BLUETOOTH_TYPES } },
+            AudioRoute.Bluetooth.takeIf { types.any(::isBluetooth) },
         )
     }
 
@@ -75,7 +76,7 @@ class CallAudio(context: Context) {
             val devices = audio.availableCommunicationDevices
             val device = when (target) {
                 AudioRoute.Speaker -> devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                AudioRoute.Bluetooth -> devices.firstOrNull { it.type in BLUETOOTH_TYPES }
+                AudioRoute.Bluetooth -> devices.firstOrNull { isBluetooth(it.type) }
                 AudioRoute.Earpiece -> devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET }
                     ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
             }
@@ -100,11 +101,9 @@ class CallAudio(context: Context) {
         route = target
     }
 
-    private companion object {
-        val BLUETOOTH_TYPES = setOf(
-            AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
-            AudioDeviceInfo.TYPE_BLE_HEADSET,
-            AudioDeviceInfo.TYPE_HEARING_AID,
-        )
-    }
+    // Only asked on Android 12+, where every one of these types exists.
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun isBluetooth(type: Int) = type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+        type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+        type == AudioDeviceInfo.TYPE_HEARING_AID
 }
