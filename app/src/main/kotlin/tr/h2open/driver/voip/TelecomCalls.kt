@@ -27,6 +27,9 @@ class TelecomCalls(private val context: Context) {
     var connection: VoipConnection? = null
         internal set
 
+    // Android 17 deprecates these in favour of the Jetpack core-telecom library;
+    // the platform calls still work on every version the app supports.
+    @Suppress("DEPRECATION")
     private fun register(): Boolean {
         if (registered) return true
         if (telecom == null || !context.packageManager.hasSystemFeature(PackageManager.FEATURE_CONNECTION_SERVICE)) return false
