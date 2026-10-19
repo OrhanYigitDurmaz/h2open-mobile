@@ -6,6 +6,7 @@
     <string name="action_decrease">Azalt</string>
     <string name="action_increase">Artır</string>
     <string name="action_retry">Tekrar dene</string>
+    <string name="action_save">Kaydet</string>
     <string name="action_sign_out">Çıkış yap</string>
     <string name="app_name">H2Open Şoför</string>
     <string name="call_active">Görüşmede</string>
@@ -25,6 +26,7 @@
     <string name="call_no_answer">Yanıt yok</string>
     <string name="call_not_found">Bu numaraya ulaşılamıyor.</string>
     <string name="call_not_set_up">Hesabınız için arama henüz ayarlanmadı.</string>
+    <string name="call_on_hold">Beklemede</string>
     <string name="call_ringing">Çalıyor…</string>
     <string name="call_speaker">Hoparlör</string>
     <string name="call_waking">Gelen arama bağlanıyor…</string>
@@ -48,6 +50,7 @@
     <string name="login_submit">Giriş yap</string>
     <string name="login_subtitle">Odoo hesabınızla giriş yapın.</string>
     <string name="login_user">Kullanıcı adı</string>
+    <string name="offline_banner">Çevrimdışısınız. Bağlantı gelene kadar değişiklik yapamazsınız.</string>
     <string name="order_notification_title">Yeni sipariş: %1$s</string>
     <string name="orders_already_taken">Bu siparişi başka bir şoför aldı.</string>
     <string name="orders_claim">Ben götürürüm</string>
@@ -75,12 +78,13 @@
     <string name="stop_elevator_no">asansör yok</string>
     <string name="stop_elevator_yes">asansör var</string>
     <string name="stop_empties">Alınan boş damacana</string>
-    <string name="stop_empties_expected">Toplanacak boş: %1$d</string>
     <string name="stop_empties_collected">Alınan boş: %1$d</string>
+    <string name="stop_empties_expected">Toplanacak boş: %1$d</string>
     <string name="stop_fail">Teslim edilemedi</string>
     <string name="stop_fail_title">Neden teslim edilemedi?</string>
     <string name="stop_floor">%1$d. kat</string>
     <string name="stop_navigate">Yol tarifi</string>
+    <string name="stop_no_location">Tam konum yok: yol tarifi adrese göre</string>
     <string name="stop_note">Not</string>
     <string name="stop_payment">Ödeme</string>
     <string name="stop_release">Geri bırak</string>
@@ -96,6 +100,13 @@
     <string name="stop_state_failed">Teslim edilemedi</string>
     <string name="stop_state_pending">Bekliyor</string>
     <string name="stop_state_skipped">Atlandı</string>
+    <string name="summary_collected">Tahsil edilen</string>
+    <string name="summary_delivered">Teslim edilen</string>
+    <string name="summary_not_delivered">Teslim edilemeyen</string>
+    <string name="summary_nothing_delivered">Henüz teslimat yok.</string>
+    <string name="summary_stops">Duraklar</string>
+    <string name="summary_title">Gün özeti</string>
+    <string name="summary_total">Toplam tahsilat</string>
     <string name="tab_orders">Siparişler</string>
     <string name="tab_trips">Seferler</string>
     <string name="time_window_afternoon">Öğleden sonra</string>
@@ -106,10 +117,14 @@
     <string name="trip_close">Seferi kapat</string>
     <string name="trip_close_text">Depoya döndüğünüzde seferi kapatın. Araç stoğu kapanışta sayılır.</string>
     <string name="trip_close_title">Sefer kapatılsın mı?</string>
+    <string name="trip_move_down">Aşağı taşı</string>
+    <string name="trip_move_up">Yukarı taşı</string>
     <plurals name="trip_progress">
         <item quantity="one">%2$d duraktan %1$d tamamlandı</item>
         <item quantity="other">%2$d duraktan %1$d tamamlandı</item>
     </plurals>
+    <string name="trip_reorder">Durakları sırala</string>
+    <string name="trip_reorder_hint">Kalan durakları gideceğiniz sıraya koyun.</string>
     <string name="trip_start">Seferi başlat</string>
     <string name="trip_state_cancelled">İptal edildi</string>
     <string name="trip_state_closed">Kapandı</string>

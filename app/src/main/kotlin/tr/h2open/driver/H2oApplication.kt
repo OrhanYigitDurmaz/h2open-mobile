@@ -6,12 +6,20 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import tr.h2open.driver.api.H2oApi
 import tr.h2open.driver.api.UnauthorizedException
+import tr.h2open.driver.data.Connectivity
+import tr.h2open.driver.data.CrashReporter
 import tr.h2open.driver.data.Session
 import tr.h2open.driver.data.SessionStore
 import tr.h2open.driver.push.OrderNotifications
@@ -25,6 +33,13 @@ class H2oApplication : Application() {
     private var cachedApi: Pair<String, H2oApi>? = null
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    /** Whether the phone is online; the app shows a bar and disables its actions when it is not. */
+    lateinit var connectivity: Connectivity
+        private set
+
+    /** Fires when the phone gets back online: screens reload what may have changed meanwhile. */
+    val backOnlineEvents: Flow<Unit> get() = connectivity.online.drop(1).filter { it }.map { }
+
     /** Calls over the office PBX. */
     val voip: VoipManager by lazy { VoipManager(this) }
 
@@ -37,13 +52,31 @@ class H2oApplication : Application() {
         ordersChanged.tryEmit(Unit)
     }
 
+    private val tripChanged = MutableSharedFlow<Long>(extraBufferCapacity = 1)
+
+    /** Fires with the trip id when the office added or removed a stop on a trip in progress: the trip screens reload. */
+    val tripChangedEvents: SharedFlow<Long> = tripChanged.asSharedFlow()
+
+    fun onTripChanged(tripId: Long) {
+        tripChanged.tryEmit(tripId)
+    }
+
     override fun onCreate() {
         super.onCreate()
+        CrashReporter.install(this)
         sessions = SessionStore(this)
+        connectivity = Connectivity(this, appScope)
         Push.init(this)
         OrderNotifications.createChannel(this)
         // The token may have changed while the app was not running.
         if (sessions.session.value != null) registerPush()
+        // Crash reports saved on the phone go to Odoo whenever the app is signed in and online.
+        appScope.launch {
+            combine(connectivity.online, sessions.session) { online, session -> online && session != null }
+                .distinctUntilChanged()
+                .filter { it }
+                .collect { CrashReporter.sendSaved(this@H2oApplication, api()) }
+        }
     }
 
     /** API client for the signed-in server. */

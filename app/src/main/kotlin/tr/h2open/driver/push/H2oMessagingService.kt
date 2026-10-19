@@ -8,7 +8,7 @@ import tr.h2open.driver.H2oApplication
 
 /**
  * Data messages from h2o_push: `incoming_call` and `call_cancelled`
- * (h2o_telephony), `order_open` and `order_claimed` (h2o_driver).
+ * (h2o_telephony), `order_open`, `order_claimed` and `trip_changed` (h2o_driver).
  */
 // Lint's check predates FCM's installation ID API: onRegistered replaces the deprecated onNewToken.
 @Suppress("MissingFirebaseInstanceTokenRefresh")
@@ -36,6 +36,7 @@ class H2oMessagingService : FirebaseMessagingService() {
                     data["order_id"]?.toLongOrNull()?.let { OrderNotifications.cancel(app, it) }
                     app.onOrdersChanged()
                 }
+                "trip_changed" -> data["trip_id"]?.toLongOrNull()?.let { app.onTripChanged(it) }
             }
         }
     }

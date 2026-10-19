@@ -180,7 +180,7 @@ class CallService : Service() {
             manager.createNotificationChannels(listOf(ringing, ongoing))
         }
 
-        fun phaseText(call: CallInfo): Int = when (call.phase) {
+        fun phaseText(call: CallInfo): Int = if (call.held && call.isLive) R.string.call_on_hold else when (call.phase) {
             CallPhase.Connecting -> R.string.call_connecting
             CallPhase.Ringing -> R.string.call_ringing
             CallPhase.Incoming -> R.string.call_incoming

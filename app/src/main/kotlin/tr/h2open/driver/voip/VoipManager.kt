@@ -40,6 +40,8 @@ data class CallInfo(
     val phase: CallPhase,
     val connectedAtMillis: Long? = null,
     val muted: Boolean = false,
+    /** Held by Android's call system while a phone call is on. */
+    val held: Boolean = false,
     val route: AudioRoute = AudioRoute.Earpiece,
     val routes: List<AudioRoute> = emptyList(),
     val endReason: EndReason? = null,
@@ -56,13 +58,17 @@ class VoipUnavailableException : Exception("Telephony is not configured on the s
 /**
  * Calls over the office PBX: gets short-lived SIP credentials from Odoo,
  * registers only while a call or a push wake-up needs it, and pairs each
- * SIP call with a WebRTC audio session. One call at a time.
+ * SIP call with a WebRTC audio session. One call at a time. Each call is
+ * also handed to Android's call system when the phone has one ([TelecomCalls]).
  */
 class VoipManager(private val app: H2oApplication) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val lock = Mutex()
     private val media by lazy { WebRtcMedia(app) }
     private val audio by lazy { CallAudio(app) }
+    private val telecom by lazy { TelecomCalls(app) }
+    /** Android's call system handles the audio mode, focus and route of the current call. */
+    private var telecomAudio = false
     private val http = OkHttpClient()
 
     private var agent: SipUserAgent? = null
@@ -93,6 +99,7 @@ class VoipManager(private val app: H2oApplication) {
         if (target.isEmpty()) return
         _call.value = CallInfo(target, name, incoming = false, phase = CallPhase.Connecting)
         CallService.start(app)
+        telecom.placeOutgoing(target, name)
         callJob = scope.launch {
             try {
                 val ua = registered()
@@ -144,8 +151,53 @@ class VoipManager(private val app: H2oApplication) {
     }
 
     fun selectRoute(route: AudioRoute) {
-        audio.select(route)
-        update { copy(route = audio.route, routes = audio.available()) }
+        val connection = telecom.connection
+        if (telecomAudio && connection != null) connection.select(route) else audio.select(route)
+        update { copy(route = currentRoute, routes = availableRoutes) }
+    }
+
+    /** Android's call system holds the call while a phone call is on, and takes it off hold after. */
+    fun setHeld(held: Boolean) {
+        session?.held = held
+        update { copy(held = held) }
+    }
+
+    // ------------------------------------------------------------------
+    // Android's call system (TelecomCalls, H2oConnectionService)
+    // ------------------------------------------------------------------
+
+    /** The call system accepted the current call; false when there is no call it can belong to. */
+    internal fun attach(connection: VoipConnection): Boolean {
+        val call = _call.value
+        if (call == null || !call.isLive || call.incoming != connection.incoming || telecom.connection != null) return false
+        telecom.connection = connection
+        return true
+    }
+
+    internal fun detach(connection: VoipConnection) {
+        if (telecom.connection === connection) telecom.connection = null
+    }
+
+    /** The call system moved the audio or found a new device (a Bluetooth car kit). */
+    internal fun onRoutesChanged() {
+        if (telecomAudio) update { copy(route = currentRoute, routes = availableRoutes) }
+    }
+
+    private val currentRoute: AudioRoute
+        get() = telecom.connection?.takeIf { telecomAudio }?.route ?: audio.route
+
+    private val availableRoutes: List<AudioRoute>
+        get() = telecom.connection?.takeIf { telecomAudio }?.routes?.ifEmpty { null } ?: audio.available()
+
+    private fun startAudio() {
+        if (telecomAudio) return
+        // With the call system, Android sets the audio up for the call (and picks the car kit itself).
+        if (telecom.connection != null) telecomAudio = true else audio.start()
+    }
+
+    private fun stopAudio() {
+        telecomAudio = false
+        audio.stop()
     }
 
     /** A push said the PBX wants to ring this phone: register so it can. */
@@ -239,6 +291,7 @@ class VoipManager(private val app: H2oApplication) {
             phase = CallPhase.Incoming,
         )
         CallService.start(app)
+        telecom.addIncoming(call.remoteUser, call.remoteDisplayName ?: wake?.callerName)
         callJob = scope.launch { follow(call) }
     }
 
@@ -252,19 +305,19 @@ class VoipManager(private val app: H2oApplication) {
                     is CallState.Ringing -> {
                         state.earlyMediaSdp?.let {
                             session?.setRemoteAnswer(it)
-                            audio.start()
+                            startAudio()
                         }
                         update { copy(phase = CallPhase.Ringing) }
                     }
                     is CallState.Connected -> {
                         if (call.isOutgoing) session?.setRemoteAnswer(state.remoteSdp)
-                        audio.start()
+                        startAudio()
                         update {
                             copy(
                                 phase = CallPhase.Active,
                                 connectedAtMillis = System.currentTimeMillis(),
-                                route = audio.route,
-                                routes = audio.available(),
+                                route = currentRoute,
+                                routes = availableRoutes,
                             )
                         }
                     }
@@ -287,7 +340,7 @@ class VoipManager(private val app: H2oApplication) {
         sipCall = null
         session?.close()
         session = null
-        audio.stop()
+        stopAudio()
         if (call != null && !call.isEnded) scope.launch { runCatching { call.hangup() } }
         _call.value?.takeIf { it.isLive }?.let { info ->
             _call.value = info.copy(phase = CallPhase.Ended, endReason = reason, failure = failure)

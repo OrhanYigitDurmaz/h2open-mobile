@@ -8,9 +8,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Icon
@@ -19,6 +23,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,9 +41,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import tr.h2open.driver.ui.call.callPermissions
+import tr.h2open.driver.ui.common.LocalOnline
+import tr.h2open.driver.ui.common.OfflineBar
 import tr.h2open.driver.ui.login.LoginScreen
 import tr.h2open.driver.ui.orders.OrdersScreen
 import tr.h2open.driver.ui.stop.StopScreen
+import tr.h2open.driver.ui.summary.SummaryScreen
 import tr.h2open.driver.ui.theme.H2OpenTheme
 import tr.h2open.driver.ui.trip.TripScreen
 import tr.h2open.driver.ui.trips.TripsScreen
@@ -55,11 +63,20 @@ class MainActivity : ComponentActivity() {
         setContent {
             H2OpenTheme {
                 val session by app.sessions.session.collectAsStateWithLifecycle()
-                // Signing out (or a rejected token) drops the whole back stack.
-                if (session == null) {
-                    LoginScreen()
-                } else {
-                    DriverNavHost(requestedTab.value, onTabShown = { requestedTab.value = null })
+                val online by app.connectivity.online.collectAsStateWithLifecycle()
+                CompositionLocalProvider(LocalOnline provides online) {
+                    Column(Modifier.fillMaxSize()) {
+                        if (!online) OfflineBar()
+                        // The bar already covers the status bar: the screens' top bars must not pad for it again.
+                        Box(Modifier.weight(1f).then(if (online) Modifier else Modifier.consumeWindowInsets(WindowInsets.statusBars))) {
+                            // Signing out (or a rejected token) drops the whole back stack.
+                            if (session == null) {
+                                LoginScreen()
+                            } else {
+                                DriverNavHost(requestedTab.value, onTabShown = { requestedTab.value = null })
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -137,7 +154,11 @@ private fun DriverNavHost(requestedTab: String?, onTabShown: () -> Unit) {
                 TripScreen(
                     onBack = { nav.popBackStack() },
                     onOpenStop = { tripId, stopId -> nav.navigate("trips/$tripId/stops/$stopId") },
+                    onOpenSummary = { tripId -> nav.navigate("trips/$tripId/summary") },
                 )
+            }
+            composable("trips/{tripId}/summary", arguments = listOf(navArgument("tripId") { type = NavType.LongType })) {
+                SummaryScreen(onBack = { nav.popBackStack() })
             }
             composable(
                 "trips/{tripId}/stops/{stopId}",

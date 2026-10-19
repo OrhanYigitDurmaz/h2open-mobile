@@ -16,6 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material.icons.filled.Summarize
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -60,6 +66,7 @@ import tr.h2open.driver.api.Trip
 import tr.h2open.driver.ui.common.ErrorBox
 import tr.h2open.driver.ui.common.Load
 import tr.h2open.driver.ui.common.LoadingBox
+import tr.h2open.driver.ui.common.LocalOnline
 import tr.h2open.driver.ui.common.errorText
 import tr.h2open.driver.ui.common.formatMoney
 import tr.h2open.driver.ui.common.formatQty
@@ -76,6 +83,17 @@ class TripViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
         private set
     /** An action the server refused, shown once in a snackbar. */
     var actionError by mutableStateOf<Throwable?>(null)
+    /** The pending stops in the order the driver is arranging, while reordering. */
+    var reordering by mutableStateOf<List<Stop>?>(null)
+        private set
+    /** Set once the driver closed the trip here: the screen opens the day's summary. */
+    var closed by mutableStateOf(false)
+
+    init {
+        // The office added or removed a stop, or the phone is back online: show the trip as it is now.
+        viewModelScope.launch { app.tripChangedEvents.collect { if (it == tripId) refresh() } }
+        viewModelScope.launch { app.backOnlineEvents.collect { refresh() } }
+    }
 
     fun refresh() {
         if (refreshing) return
@@ -96,8 +114,33 @@ class TripViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
 
     fun close() = act {
         app.api().closeTrip(tripId)
+        closed = true
         // close answers the summary only; reload for the stops.
         app.api().trip(tripId)
+    }
+
+    fun startReorder() {
+        reordering = (trip as? Load.Ready)?.value?.stops?.filter { it.isPending }
+    }
+
+    fun cancelReorder() {
+        reordering = null
+    }
+
+    /** Moves the stop at [index] one place up ([delta] = -1) or down (+1). */
+    fun move(index: Int, delta: Int) {
+        val stops = reordering?.toMutableList() ?: return
+        val target = index + delta
+        if (index !in stops.indices || target !in stops.indices) return
+        stops.add(target, stops.removeAt(index))
+        reordering = stops
+    }
+
+    fun saveReorder() {
+        val stops = reordering ?: return
+        act {
+            app.api().reorder(tripId, stops.map { it.id }).also { reordering = null }
+        }
     }
 
     private fun act(call: suspend () -> Trip) {
@@ -127,10 +170,18 @@ class TripViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
 fun TripScreen(
     onBack: () -> Unit,
     onOpenStop: (tripId: Long, stopId: Long) -> Unit,
+    onOpenSummary: (tripId: Long) -> Unit,
     vm: TripViewModel = viewModel(factory = TripViewModel.Factory),
 ) {
     // Runs again when coming back from a stop, so its new state shows.
     LaunchedEffect(Unit) { vm.refresh() }
+    LaunchedEffect(vm.closed) {
+        if (vm.closed) {
+            vm.closed = false
+            onOpenSummary(vm.tripId)
+        }
+    }
+    val online = LocalOnline.current
 
     val snackbar = remember { SnackbarHostState() }
     vm.actionError?.let { error ->
@@ -151,6 +202,19 @@ fun TripScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
+                actions = {
+                    val trip = (vm.trip as? Load.Ready)?.value
+                    if (trip != null && vm.reordering == null) {
+                        if (trip.canReorder) {
+                            IconButton(onClick = vm::startReorder, enabled = online && !vm.busy) {
+                                Icon(Icons.Filled.SwapVert, contentDescription = stringResource(R.string.trip_reorder))
+                            }
+                        }
+                        IconButton(onClick = { onOpenSummary(trip.id) }) {
+                            Icon(Icons.Filled.Summarize, contentDescription = stringResource(R.string.summary_title))
+                        }
+                    }
+                },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -163,13 +227,22 @@ fun TripScreen(
             when (val state = vm.trip) {
                 Load.Loading -> LoadingBox()
                 is Load.Failed -> ErrorBox(state.error, onRetry = vm::refresh)
-                is Load.Ready -> TripContent(
-                    trip = state.value,
-                    busy = vm.busy,
-                    onStart = vm::start,
-                    onClose = { confirmClose = true },
-                    onOpenStop = { onOpenStop(state.value.id, it.id) },
-                )
+                is Load.Ready -> when (val order = vm.reordering) {
+                    null -> TripContent(
+                        trip = state.value,
+                        busy = vm.busy || !online,
+                        onStart = vm::start,
+                        onClose = { confirmClose = true },
+                        onOpenStop = { onOpenStop(state.value.id, it.id) },
+                    )
+                    else -> ReorderContent(
+                        stops = order,
+                        busy = vm.busy || !online,
+                        onMove = vm::move,
+                        onSave = vm::saveReorder,
+                        onCancel = vm::cancelReorder,
+                    )
+                }
             }
         }
     }
@@ -242,10 +315,60 @@ private fun StopRow(stop: Stop, enabled: Boolean, onClick: () -> Unit) {
                     window,
                 )
                 if (summary.isNotEmpty()) Text(summary.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+                if (stop.isPending && !stop.partner.hasLocation) NoLocationLabel()
             }
             if (!stop.isPending || !enabled) {
                 Text(stopStateLabel(stop.state), style = MaterialTheme.typography.labelMedium, color = stopColor(stop.state))
             }
+        }
+    }
+}
+
+/** The office has not pinned this address yet: navigation goes by the address text. */
+@Composable
+fun NoLocationLabel() {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.LocationOff, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+        Text(stringResource(R.string.stop_no_location), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** The pending stops with up and down buttons, in the order the driver wants to drive them. */
+@Composable
+private fun ReorderContent(stops: List<Stop>, busy: Boolean, onMove: (index: Int, delta: Int) -> Unit, onSave: () -> Unit, onCancel: () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Text(
+            stringResource(R.string.trip_reorder_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(16.dp),
+        )
+        LazyColumn(
+            Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(stops.size, key = { stops[it].id }) { index ->
+                val stop = stops[index]
+                Card(Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${index + 1}.", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(end = 12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(stop.partner.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(stop.partner.address, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        IconButton(onClick = { onMove(index, -1) }, enabled = index > 0) {
+                            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.trip_move_up))
+                        }
+                        IconButton(onClick = { onMove(index, 1) }, enabled = index < stops.lastIndex) {
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.trip_move_down))
+                        }
+                    }
+                }
+            }
+        }
+        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.action_cancel)) }
+            Button(onClick = onSave, enabled = !busy, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.action_save)) }
         }
     }
 }

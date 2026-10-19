@@ -69,6 +69,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.launch
 import tr.h2open.driver.H2oApplication
 import tr.h2open.driver.R
+import tr.h2open.driver.api.ApiException
 import tr.h2open.driver.api.DeliverRequest
 import tr.h2open.driver.api.DeliveredLine
 import tr.h2open.driver.api.FailureReason
@@ -80,9 +81,11 @@ import tr.h2open.driver.ui.call.rememberVoipCall
 import tr.h2open.driver.ui.common.ErrorBox
 import tr.h2open.driver.ui.common.Load
 import tr.h2open.driver.ui.common.LoadingBox
+import tr.h2open.driver.ui.common.LocalOnline
 import tr.h2open.driver.ui.common.errorText
 import tr.h2open.driver.ui.common.formatMoney
 import tr.h2open.driver.ui.common.formatQty
+import tr.h2open.driver.ui.trip.NoLocationLabel
 import tr.h2open.driver.ui.trip.failureReasonLabel
 import tr.h2open.driver.ui.trip.paymentMethodLabel
 import tr.h2open.driver.ui.trip.stopStateLabel
@@ -119,7 +122,8 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
         viewModelScope.launch {
             data = try {
                 val trip = app.api().trip(tripId)
-                val stop = trip.stops.first { it.id == stopId }
+                // Gone when the office moved it to another trip meanwhile.
+                val stop = trip.stops.firstOrNull { it.id == stopId } ?: throw ApiException(404, "Stop not found")
                 prefill(stop)
                 Load.Ready(trip to stop)
             } catch (e: Exception) {
@@ -248,6 +252,7 @@ fun StopScreen(onBack: () -> Unit, vm: StopViewModel = viewModel(factory = StopV
 private fun CustomerCard(stop: Stop) {
     val context = LocalContext.current
     val voipCall = rememberVoipCall()
+    val online = LocalOnline.current
     val partner = stop.partner
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -255,6 +260,7 @@ private fun CustomerCard(stop: Stop) {
                 Text(partner.customerName, style = MaterialTheme.typography.labelLarge)
             }
             Text(partner.address.ifBlank { "—" }, style = MaterialTheme.typography.bodyLarge)
+            if (!partner.hasLocation) NoLocationLabel()
             val floor = if (partner.floor != 0) stringResource(R.string.stop_floor, partner.floor) else null
             val elevator = if (partner.floor != 0) {
                 stringResource(if (partner.hasElevator) R.string.stop_elevator_yes else R.string.stop_elevator_no)
@@ -275,7 +281,7 @@ private fun CustomerCard(stop: Stop) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (partner.phone.isNotBlank()) {
                     // Through the office line, so the customer sees the company number.
-                    OutlinedButton(onClick = { voipCall(partner.phone, partner.name) }) {
+                    OutlinedButton(onClick = { voipCall(partner.phone, partner.name) }, enabled = online) {
                         Icon(Icons.Filled.Call, contentDescription = null)
                         Text(stringResource(R.string.stop_call), Modifier.padding(start = 8.dp))
                     }
@@ -296,7 +302,7 @@ private fun CustomerCard(stop: Stop) {
 @Composable
 private fun ReleaseButton(vm: StopViewModel) {
     var confirm by remember { mutableStateOf(false) }
-    TextButton(onClick = { confirm = true }, enabled = !vm.busy) { Text(stringResource(R.string.stop_release)) }
+    TextButton(onClick = { confirm = true }, enabled = !vm.busy && LocalOnline.current) { Text(stringResource(R.string.stop_release)) }
     if (confirm) {
         AlertDialog(
             onDismissRequest = { confirm = false },
@@ -331,6 +337,8 @@ private fun StopResult(stop: Stop) {
 @Composable
 private fun DeliveryForm(stop: Stop, vm: StopViewModel) {
     val signature = rememberSignatureState()
+    // Nothing can be sent while offline; the form keeps what was typed.
+    val canAct = !vm.busy && LocalOnline.current
     var showFail by remember { mutableStateOf(false) }
     var confirmSkip by remember { mutableStateOf(false) }
 
@@ -388,14 +396,14 @@ private fun DeliveryForm(stop: Stop, vm: StopViewModel) {
 
     Button(
         onClick = { vm.deliver(signature.toBase64Png()) },
-        enabled = !vm.busy,
+        enabled = canAct,
         modifier = Modifier.fillMaxWidth(),
     ) { Text(stringResource(R.string.stop_deliver)) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { showFail = true }, enabled = !vm.busy, modifier = Modifier.weight(1f)) {
+        OutlinedButton(onClick = { showFail = true }, enabled = canAct, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.stop_fail))
         }
-        OutlinedButton(onClick = { confirmSkip = true }, enabled = !vm.busy, modifier = Modifier.weight(1f)) {
+        OutlinedButton(onClick = { confirmSkip = true }, enabled = canAct, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.stop_skip))
         }
     }
@@ -475,20 +483,29 @@ private fun dial(context: Context, phone: String) {
     context.startSafely(Intent(Intent.ACTION_DIAL, "tel:$number".toUri()))
 }
 
-/** Opens the maps app on the customer's pin, or on the address when there is none. */
+/**
+ * Starts Google Maps turn-by-turn to the customer's pin. Without Google Maps,
+ * opens any maps app on the pin; without a pin, on the address text.
+ * Opening the maps app costs nothing: no Google API is called.
+ */
 private fun navigate(context: Context, partner: Partner) {
-    val uri = if (partner.latitude != null && partner.longitude != null) {
-        "geo:${partner.latitude},${partner.longitude}?q=${partner.latitude},${partner.longitude}(${Uri.encode(partner.name)})"
+    val lat = partner.latitude
+    val lng = partner.longitude
+    if (lat != null && lng != null) {
+        val googleMaps = Intent(Intent.ACTION_VIEW, "google.navigation:q=$lat,$lng".toUri()).setPackage(GOOGLE_MAPS)
+        if (context.startSafely(googleMaps)) return
+        context.startSafely(Intent(Intent.ACTION_VIEW, "geo:$lat,$lng?q=$lat,$lng(${Uri.encode(partner.name)})".toUri()))
     } else {
-        "geo:0,0?q=${Uri.encode(partner.address)}"
+        context.startSafely(Intent(Intent.ACTION_VIEW, "geo:0,0?q=${Uri.encode(partner.address)}".toUri()))
     }
-    context.startSafely(Intent(Intent.ACTION_VIEW, uri.toUri()))
 }
 
-private fun Context.startSafely(intent: Intent) {
-    try {
-        startActivity(intent)
-    } catch (_: ActivityNotFoundException) {
-        // No dialer or maps app on this device: nothing to open.
-    }
+private const val GOOGLE_MAPS = "com.google.android.apps.maps"
+
+/** False when no app on the phone can open [intent]. */
+private fun Context.startSafely(intent: Intent): Boolean = try {
+    startActivity(intent)
+    true
+} catch (_: ActivityNotFoundException) {
+    false
 }

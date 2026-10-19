@@ -6,6 +6,7 @@
     <string name="action_decrease">Less</string>
     <string name="action_increase">More</string>
     <string name="action_retry">Try again</string>
+    <string name="action_save">Save</string>
     <string name="action_sign_out">Sign out</string>
     <string name="app_name">H2Open Driver</string>
     <string name="call_active">On call</string>
@@ -25,6 +26,7 @@
     <string name="call_no_answer">No answer</string>
     <string name="call_not_found">This number can\'t be reached.</string>
     <string name="call_not_set_up">Calling is not set up for your account yet.</string>
+    <string name="call_on_hold">On hold</string>
     <string name="call_ringing">Ringing…</string>
     <string name="call_speaker">Speaker</string>
     <string name="call_waking">Connecting an incoming call…</string>
@@ -48,6 +50,7 @@
     <string name="login_submit">Sign in</string>
     <string name="login_subtitle">Sign in with your Odoo account.</string>
     <string name="login_user">User name</string>
+    <string name="offline_banner">You are offline. You can\'t make changes until the connection is back.</string>
     <string name="order_notification_title">New order: %1$s</string>
     <string name="orders_already_taken">Another driver already took this order.</string>
     <string name="orders_claim">I\'ll deliver it</string>
@@ -75,12 +78,13 @@
     <string name="stop_elevator_no">no elevator</string>
     <string name="stop_elevator_yes">elevator</string>
     <string name="stop_empties">Empties collected</string>
-    <string name="stop_empties_expected">Empties to collect: %1$d</string>
     <string name="stop_empties_collected">Empties collected: %1$d</string>
+    <string name="stop_empties_expected">Empties to collect: %1$d</string>
     <string name="stop_fail">Couldn\'t deliver</string>
     <string name="stop_fail_title">Why couldn\'t you deliver?</string>
     <string name="stop_floor">Floor %1$d</string>
     <string name="stop_navigate">Directions</string>
+    <string name="stop_no_location">No exact location: navigation uses the address</string>
     <string name="stop_note">Note</string>
     <string name="stop_payment">Payment</string>
     <string name="stop_release">Give back</string>
@@ -96,6 +100,13 @@
     <string name="stop_state_failed">Not delivered</string>
     <string name="stop_state_pending">Pending</string>
     <string name="stop_state_skipped">Skipped</string>
+    <string name="summary_collected">Collected</string>
+    <string name="summary_delivered">Delivered</string>
+    <string name="summary_not_delivered">Not delivered</string>
+    <string name="summary_nothing_delivered">Nothing delivered yet.</string>
+    <string name="summary_stops">Stops</string>
+    <string name="summary_title">Day summary</string>
+    <string name="summary_total">Total collected</string>
     <string name="tab_orders">Orders</string>
     <string name="tab_trips">Trips</string>
     <string name="time_window_afternoon">Afternoon</string>
@@ -106,10 +117,14 @@
     <string name="trip_close">Close trip</string>
     <string name="trip_close_text">Close the trip once you are back at the depot. The vehicle stock is counted when it closes.</string>
     <string name="trip_close_title">Close the trip?</string>
+    <string name="trip_move_down">Move down</string>
+    <string name="trip_move_up">Move up</string>
     <plurals name="trip_progress">
         <item quantity="one">%1$d of %2$d stop done</item>
         <item quantity="other">%1$d of %2$d stops done</item>
     </plurals>
+    <string name="trip_reorder">Reorder stops</string>
+    <string name="trip_reorder_hint">Put the stops left in the order you will drive them.</string>
     <string name="trip_start">Start trip</string>
     <string name="trip_state_cancelled">Cancelled</string>
     <string name="trip_state_closed">Closed</string>

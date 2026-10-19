@@ -56,6 +56,12 @@ class TripsViewModel(private val app: H2oApplication) : ViewModel() {
 
     val driverName get() = app.sessions.session.value?.user?.name.orEmpty()
 
+    init {
+        // The office changed a trip in progress, or the phone is back online: show the trips as they are now.
+        viewModelScope.launch { app.tripChangedEvents.collect { refresh() } }
+        viewModelScope.launch { app.backOnlineEvents.collect { refresh() } }
+    }
+
     fun refresh() {
         if (refreshing) return
         refreshing = true

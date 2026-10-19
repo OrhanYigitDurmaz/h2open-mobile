@@ -72,6 +72,19 @@ class H2oApiTest {
     }
 
     @Test
+    fun `crash reports`() = runTest {
+        server.enqueue(json("""{"received": 1}"""))
+        val sent = api.sendCrashes(listOf(CrashReport("java.lang.IllegalStateException: boom", appVersion = "0.2.0",
+            device = "Samsung SM-A155F", osVersion = "15", occurredAt = "2026-10-19T08:30:00Z")))
+        assertEquals(1, sent)
+        val req = server.takeRequest()
+        assertEquals("/h2o/api/v1/crashes", req.target)
+        assertEquals("Bearer secret", req.headers["Authorization"])
+        assertEquals("""{"reports":[{"stack_trace":"java.lang.IllegalStateException: boom","app_version":"0.2.0",""" +
+            """"device":"Samsung SM-A155F","os_version":"15","occurred_at":"2026-10-19T08:30:00Z"}]}""", req.body!!.utf8())
+    }
+
+    @Test
     fun `sip credentials`() = runTest {
         server.enqueue(json("""{"username": "1001", "password": "pw", "domain": "pbx.h2open.com.tr",
             "wss_url": "wss://vps.h2open.com.tr/ws", "expires_at": "2026-10-18T22:00:00Z", "ice_servers": []}"""))
