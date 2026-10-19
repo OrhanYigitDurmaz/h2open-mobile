@@ -59,7 +59,7 @@ class H2oConnectionService : ConnectionService() {
     }
 
     private companion object {
-        const val TAG = "H2oTelecom"
+        const val TAG = "H2Open.Telecom"
     }
 }
 

@@ -1,6 +1,5 @@
 package tr.h2open.driver.voip
 
-import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +17,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import tr.h2open.driver.H2oApplication
 import tr.h2open.driver.api.ApiException
+import tr.h2open.driver.data.ErrorLog
 import tr.h2open.driver.sip.CallState
 import tr.h2open.driver.sip.EndReason
 import tr.h2open.driver.sip.RegistrationState
@@ -40,6 +40,8 @@ data class CallInfo(
     val phase: CallPhase,
     val connectedAtMillis: Long? = null,
     val muted: Boolean = false,
+    /** The exact failure ([ErrorLog.describe]) when the call failed, shown under the status. */
+    val failureDetail: String? = null,
     /** Held by Android's call system while a phone call is on. */
     val held: Boolean = false,
     val route: AudioRoute = AudioRoute.Earpiece,
@@ -111,8 +113,8 @@ class VoipManager(private val app: H2oApplication) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Call to $target failed", e)
-                end(EndReason.Failed, failureOf(e))
+                ErrorLog.log("Call to $target", e)
+                end(EndReason.Failed, failureOf(e), e)
             }
         }
     }
@@ -128,8 +130,8 @@ class VoipManager(private val app: H2oApplication) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Answering failed", e)
-                end(EndReason.Failed, CallFailure.Other)
+                ErrorLog.log("Answer call", e)
+                end(EndReason.Failed, CallFailure.Other, e)
             }
         }
     }
@@ -214,7 +216,7 @@ class VoipManager(private val app: H2oApplication) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Could not register for an incoming call", e)
+                ErrorLog.log("Register for an incoming call", e)
             }
             if (_wake.value === wake) _wake.value = null
             scheduleIdle()
@@ -328,14 +330,14 @@ class VoipManager(private val app: H2oApplication) {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Call media failed", e)
-            end(EndReason.Failed, CallFailure.Other)
+            ErrorLog.log("Call media", e)
+            end(EndReason.Failed, CallFailure.Other, e)
             return
         }
         end(ended?.reason ?: EndReason.Failed)
     }
 
-    private fun end(reason: EndReason, failure: CallFailure? = null) {
+    private fun end(reason: EndReason, failure: CallFailure? = null, error: Throwable? = null) {
         val call = sipCall
         sipCall = null
         session?.close()
@@ -343,7 +345,12 @@ class VoipManager(private val app: H2oApplication) {
         stopAudio()
         if (call != null && !call.isEnded) scope.launch { runCatching { call.hangup() } }
         _call.value?.takeIf { it.isLive }?.let { info ->
-            _call.value = info.copy(phase = CallPhase.Ended, endReason = reason, failure = failure)
+            _call.value = info.copy(
+                phase = CallPhase.Ended,
+                endReason = reason,
+                failure = failure,
+                failureDetail = error?.let(ErrorLog::describe),
+            )
             val endedInfo = _call.value
             scope.launch {
                 delay(ENDED_LINGER)
@@ -381,7 +388,6 @@ class VoipManager(private val app: H2oApplication) {
     }
 
     private companion object {
-        const val TAG = "H2oVoip"
         const val CREDENTIALS_MARGIN = 10 * 60_000L
         const val WAKE_TIMEOUT = 30_000L
         const val IDLE_TIMEOUT = 60_000L

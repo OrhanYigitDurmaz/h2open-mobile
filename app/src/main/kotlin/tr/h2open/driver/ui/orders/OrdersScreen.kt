@@ -79,7 +79,7 @@ class OrdersViewModel(private val app: H2oApplication) : ViewModel() {
             orders = try {
                 Load.Ready(app.api().openOrders())
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Orders: load", e)
                 if (orders is Load.Ready) orders else Load.Failed(e)
             } finally {
                 refreshing = false
@@ -95,7 +95,7 @@ class OrdersViewModel(private val app: H2oApplication) : ViewModel() {
                 claimed = app.api().claimOrder(order.id)
                 true
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Orders: claim order", e)
                 claimError = e
                 e is ApiException && e.status == 409
             } finally {

@@ -146,6 +146,43 @@ class H2oApiTest {
     }
 
     @Test
+    fun `errors name the call that failed`() = runTest {
+        server.enqueue(json("""{"message": "boom"}""", code = 500))
+        try {
+            api.deliver(12, DeliverRequest(lines = emptyList(), emptiesCollected = 0, paymentMethod = PaymentMethod.CASH))
+            fail("expected ApiException")
+        } catch (e: ApiException) {
+            assertEquals(500, e.status)
+            assertEquals("POST driver/stops/12/deliver", e.request)
+            assertEquals("""{"message": "boom"}""", e.responseBody)
+        }
+    }
+
+    @Test
+    fun `an answer the app cannot read is a BadResponseException`() = runTest {
+        server.enqueue(json("""[1, 2]"""))
+        try {
+            api.trip(3)
+            fail("expected BadResponseException")
+        } catch (e: BadResponseException) {
+            assertEquals("GET driver/trips/3", e.request)
+            assertEquals("[1, 2]", e.responseBody)
+        }
+    }
+
+    @Test
+    fun `no answer at all is a NetworkException naming the call`() = runTest {
+        server.close()
+        try {
+            api.trips()
+            fail("expected NetworkException")
+        } catch (e: NetworkException) {
+            assertEquals("GET driver/trips", e.request)
+            assertTrue(e.cause is java.io.IOException)
+        }
+    }
+
+    @Test
     fun `werkzeug errors lose their status prefix`() {
         assertEquals("Stop not found", H2oApi.errorMessage("""{"message": "404 Not Found: Stop not found"}"""))
         assertEquals("Only drivers can use the driver app",

@@ -102,7 +102,7 @@ class TripViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
             trip = try {
                 Load.Ready(app.api().trip(tripId))
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Trip: load", e)
                 if (trip is Load.Ready) trip.also { actionError = e } else Load.Failed(e)
             } finally {
                 refreshing = false
@@ -110,9 +110,9 @@ class TripViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
         }
     }
 
-    fun start() = act { app.api().startTrip(tripId) }
+    fun start() = act("start") { app.api().startTrip(tripId) }
 
-    fun close() = act {
+    fun close() = act("close") {
         app.api().closeTrip(tripId)
         closed = true
         // close answers the summary only; reload for the stops.
@@ -138,19 +138,19 @@ class TripViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
 
     fun saveReorder() {
         val stops = reordering ?: return
-        act {
+        act("reorder") {
             app.api().reorder(tripId, stops.map { it.id }).also { reordering = null }
         }
     }
 
-    private fun act(call: suspend () -> Trip) {
+    private fun act(name: String, call: suspend () -> Trip) {
         if (busy) return
         busy = true
         viewModelScope.launch {
             try {
                 trip = Load.Ready(call())
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Trip: $name", e)
                 actionError = e
             } finally {
                 busy = false

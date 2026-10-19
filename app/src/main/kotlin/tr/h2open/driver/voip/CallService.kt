@@ -145,7 +145,7 @@ class CallService : Service() {
     private fun person(name: String) = Person.Builder().setName(name).setImportant(true).build()
 
     companion object {
-        private const val TAG = "H2oCallService"
+        private const val TAG = "H2Open.CallService"
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_INCOMING = "calls_incoming"
         private const val CHANNEL_ONGOING = "calls_ongoing"

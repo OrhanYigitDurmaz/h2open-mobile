@@ -69,7 +69,7 @@ class TripsViewModel(private val app: H2oApplication) : ViewModel() {
             trips = try {
                 Load.Ready(app.api().trips())
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Trips: load", e)
                 if (trips is Load.Ready) trips else Load.Failed(e)
             } finally {
                 refreshing = false

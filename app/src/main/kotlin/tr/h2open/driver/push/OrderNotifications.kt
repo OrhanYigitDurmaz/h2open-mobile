@@ -18,7 +18,7 @@ import tr.h2open.driver.R
  */
 object OrderNotifications {
     private const val CHANNEL = "orders"
-    private const val TAG = "order"
+    private const val TAG = "H2Open.Orders"
 
     fun createChannel(context: Context) {
         val channel = NotificationChannel(

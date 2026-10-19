@@ -127,7 +127,7 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
                 prefill(stop)
                 Load.Ready(trip to stop)
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Stop: load", e)
                 Load.Failed(e)
             }
         }
@@ -145,7 +145,7 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
     fun deliver(signature: String?) {
         val stop = (data as? Load.Ready)?.value?.second ?: return
         val amount = paymentAmount.replace(',', '.').trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
-        act {
+        act("deliver") {
             app.api().deliver(stop.id, DeliverRequest(
                 // Only lines that differ from the plan; the rest are delivered as planned.
                 lines = stop.lines
@@ -161,17 +161,17 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
         }
     }
 
-    fun fail(reason: String, note: String) = act { app.api().fail(stopId, reason, note.trim().ifEmpty { null }) }
+    fun fail(reason: String, note: String) = act("fail") { app.api().fail(stopId, reason, note.trim().ifEmpty { null }) }
 
-    fun skip() = act { app.api().skip(stopId) }
+    fun skip() = act("skip") { app.api().skip(stopId) }
 
     /** Give back an order the driver took from the Orders tab. */
-    fun release() = act {
+    fun release() = act("give back") {
         app.api().releaseStop(stopId)
         app.onOrdersChanged()
     }
 
-    private fun act(call: suspend () -> Unit) {
+    private fun act(name: String, call: suspend () -> Unit) {
         if (busy) return
         busy = true
         viewModelScope.launch {
@@ -179,7 +179,7 @@ class StopViewModel(private val app: H2oApplication, handle: SavedStateHandle) :
                 call()
                 finished = true
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Stop: $name", e)
                 actionError = e
             } finally {
                 busy = false

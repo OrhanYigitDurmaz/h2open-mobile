@@ -18,25 +18,49 @@ import androidx.compose.ui.unit.dp
 import tr.h2open.driver.NotADriverException
 import tr.h2open.driver.R
 import tr.h2open.driver.api.ApiException
+import tr.h2open.driver.api.BadResponseException
+import tr.h2open.driver.api.NetworkException
+import tr.h2open.driver.data.ErrorLog
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
+import javax.net.ssl.SSLException
 
-/** A message a driver can act on, from any error the API client throws. */
+/**
+ * What went wrong, for the driver and for a bug report: a line saying what
+ * it means, then the exact failure (call, HTTP status, Odoo's message or the
+ * exception). The same failure is in logcat under "H2Open" ([ErrorLog]).
+ */
 @Composable
-fun errorText(error: Throwable): String = when (error) {
-    is NotADriverException -> stringResource(R.string.error_not_driver)
-    is ApiException -> when (error.status) {
-        401 -> stringResource(R.string.error_signed_out)
-        403 -> stringResource(R.string.error_not_driver)
-        404 -> stringResource(R.string.error_not_found)
-        else -> error.message ?: stringResource(R.string.error_unknown)
+fun errorText(error: Throwable): String {
+    val headline = when (error) {
+        is NotADriverException -> return stringResource(R.string.error_not_driver)
+        is ApiException -> when (error.status) {
+            400 -> stringResource(R.string.error_bad_request)
+            401 -> stringResource(R.string.error_signed_out)
+            403 -> stringResource(R.string.error_not_driver)
+            404 -> stringResource(R.string.error_not_found)
+            409 -> stringResource(R.string.error_conflict)
+            422 -> stringResource(R.string.error_not_allowed)
+            in 500..599 -> stringResource(R.string.error_server)
+            else -> stringResource(R.string.error_http)
+        }
+        is NetworkException -> when (error.cause) {
+            is UnknownHostException -> stringResource(R.string.error_host)
+            is ConnectException -> stringResource(R.string.error_refused)
+            is SocketTimeoutException -> stringResource(R.string.error_timeout)
+            is SSLException -> stringResource(R.string.error_tls)
+            else -> stringResource(R.string.error_network)
+        }
+        is IOException -> stringResource(R.string.error_network)
+        is BadResponseException -> stringResource(R.string.error_bad_response)
+        else -> stringResource(R.string.error_app)
     }
-    // The cause helps tell a wrong address from a blocked port or HTTP being refused.
-    is IOException -> stringResource(R.string.error_network) + "\n\n" + (error.message ?: error.javaClass.simpleName)
-    // Unexpected: name the exception so a screenshot says what broke.
-    else -> stringResource(R.string.error_unknown) + "\n\n" + (error.message ?: error.javaClass.simpleName)
+    return headline + "\n\n" + ErrorLog.describe(error)
 }
 
 @Composable

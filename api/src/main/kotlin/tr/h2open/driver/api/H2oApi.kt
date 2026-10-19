@@ -27,10 +27,26 @@ import kotlin.coroutines.resumeWithException
  * An error answer from Odoo. [status] follows h2o_driver: 400 bad input,
  * 401 signed out, 403 not a driver, 404 someone else's record, 409 order already taken, 422 wrong state.
  */
-open class ApiException(val status: Int, message: String) : IOException(message)
+open class ApiException(
+    val status: Int,
+    message: String,
+    /** The call that failed, like `POST driver/stops/12/deliver`; null when the app raised it itself. */
+    val request: String? = null,
+    /** The start of Odoo's answer, for the log. */
+    val responseBody: String? = null,
+) : IOException(message)
 
 /** The token is missing, expired or revoked: the driver has to sign in again. */
-class UnauthorizedException(message: String) : ApiException(401, message)
+class UnauthorizedException(message: String, request: String? = null, responseBody: String? = null) :
+    ApiException(401, message, request, responseBody)
+
+/** The request never got an answer: no network, wrong address, refused, timed out, TLS. [cause] says which. */
+class NetworkException(val request: String, cause: IOException) :
+    IOException("$request: ${cause.javaClass.simpleName}: ${cause.message}", cause)
+
+/** Odoo answered, but not with what the app expects (the app and the modules may not match). */
+class BadResponseException(val request: String, val responseBody: String, cause: Throwable) :
+    Exception("$request: ${cause.message}", cause)
 
 /**
  * Client for the H2Open app API (`/h2o/api/v1/...`). Bodies are plain JSON
@@ -60,8 +76,8 @@ class H2oApi(
     suspend fun login(login: String, password: String, deviceName: String): UserProfile {
         val body = JSON.encodeToString(LoginRequest.serializer(), LoginRequest(login, password, deviceName))
         val text = send(Request.Builder().url(url("login")).post(body.toRequestBody(JSON_MEDIA)), bearer = null)
-        val user = JSON.decodeFromString(LoginResponse.serializer(), text).user
-        tokens.save(JSON.decodeFromString(TokenResponse.serializer(), text).toTokens(clock()))
+        val user = decode(LoginResponse.serializer(), text, "POST login").user
+        tokens.save(decode(TokenResponse.serializer(), text, "POST login").toTokens(clock()))
         return user
     }
 
@@ -168,7 +184,7 @@ class H2oApi(
             // Revoked or expired early (server restart, clock): one refresh, one retry.
             send(builder, refresh(current.accessToken).accessToken)
         }
-        return JSON.decodeFromString(out, text)
+        return decode(out, text, label(builder.build()))
     }
 
     /**
@@ -189,19 +205,43 @@ class H2oApi(
             tokens.clear()
             throw e
         }
-        JSON.decodeFromString(TokenResponse.serializer(), text).toTokens(clock()).also(tokens::save)
+        decode(TokenResponse.serializer(), text, "POST token/refresh").toTokens(clock()).also(tokens::save)
     }
 
     private suspend fun send(builder: Request.Builder, bearer: String?): String {
         builder.header("Accept", "application/json")
         if (bearer != null) builder.header("Authorization", "Bearer $bearer")
-        val response = http.newCall(builder.build()).await()
+        val request = builder.build()
+        val label = label(request)
+        val response = try {
+            http.newCall(request).await()
+        } catch (e: ApiException) {
+            throw e
+        } catch (e: IOException) {
+            throw NetworkException(label, e)
+        }
         val text = response.body
         if (!response.isSuccessful) {
             val message = errorMessage(text) ?: response.message.ifBlank { "HTTP ${response.code}" }
-            throw if (response.code == 401) UnauthorizedException(message) else ApiException(response.code, message)
+            val body = text.take(MAX_LOGGED_BODY)
+            throw if (response.code == 401) {
+                UnauthorizedException(message, label, body)
+            } else {
+                ApiException(response.code, message, label, body)
+            }
         }
         return text
+    }
+
+    /** `POST driver/stops/12/deliver`: which call failed, without the server address. */
+    private fun label(request: Request): String =
+        "${request.method} ${request.url.encodedPath.removePrefix(base.encodedPath).removePrefix("h2o/api/v1/")}"
+
+    private fun <T> decode(serializer: KSerializer<T>, text: String, request: String): T = try {
+        JSON.decodeFromString(serializer, text)
+    } catch (e: IllegalArgumentException) {
+        // kotlinx.serialization's SerializationException is an IllegalArgumentException.
+        throw BadResponseException(request, text.take(MAX_LOGGED_BODY), e)
     }
 
     companion object {
@@ -213,6 +253,7 @@ class H2oApi(
         private val JSON_MEDIA = "application/json".toMediaType()
         /** Refresh this long before the access token runs out, so a call never starts with a dying token. */
         private const val EARLY_REFRESH_MILLIS = 5 * 60 * 1000L
+        private const val MAX_LOGGED_BODY = 2000
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)

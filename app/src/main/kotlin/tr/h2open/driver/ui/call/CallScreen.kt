@@ -74,6 +74,15 @@ fun CallScreen(
             }
             Spacer(Modifier.height(12.dp))
             Text(statusText(call), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            call.failureDetail?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                )
+            }
 
             Spacer(Modifier.weight(1f))
 

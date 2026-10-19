@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 import tr.h2open.driver.H2oApplication
 import tr.h2open.driver.R
 import tr.h2open.driver.api.UnauthorizedException
+import tr.h2open.driver.data.ErrorLog
 import tr.h2open.driver.ui.common.LocalOnline
 import tr.h2open.driver.ui.common.errorText
 
@@ -60,6 +61,7 @@ class LoginViewModel(private val app: H2oApplication) : ViewModel() {
                 app.signIn(server, login, password)
                 password = ""
             } catch (e: Exception) {
+                ErrorLog.log("Sign in", e)
                 error = e
             } finally {
                 busy = false
