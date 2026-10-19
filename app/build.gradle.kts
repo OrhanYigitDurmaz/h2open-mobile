@@ -30,6 +30,21 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // There is no release key yet; CI passes -PdebugSignRelease so its release APKs install.
+            if (providers.gradleProperty("debugSignRelease").isPresent) {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+        }
+    }
+
+    // One APK per ABI, 64-bit only: arm64-v8a for phones, x86_64 for the emulator.
+    // WebRTC's native library is most of the APK, so each APK carries just its own copy.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "x86_64")
+            isUniversalApk = false
         }
     }
 
