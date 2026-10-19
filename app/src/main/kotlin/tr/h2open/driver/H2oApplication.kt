@@ -2,7 +2,6 @@ package tr.h2open.driver
 
 import android.app.Application
 import android.os.Build
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,6 +19,7 @@ import tr.h2open.driver.api.H2oApi
 import tr.h2open.driver.api.UnauthorizedException
 import tr.h2open.driver.data.Connectivity
 import tr.h2open.driver.data.CrashReporter
+import tr.h2open.driver.data.ErrorLog
 import tr.h2open.driver.data.Session
 import tr.h2open.driver.data.SessionStore
 import tr.h2open.driver.push.OrderNotifications
@@ -97,7 +97,7 @@ class H2oApplication : Application() {
         val user = api.login(login.trim(), password, deviceName)
         if (!user.isDriver) {
             // Not a driver: end the session the login just opened.
-            runCatching { api.logout() }
+            runCatching { api.logout() }.onFailure { ErrorLog.log("Sign out (not a driver)", it) }
             sessions.clear()
             throw NotADriverException()
         }
@@ -119,15 +119,21 @@ class H2oApplication : Application() {
         appScope.launch {
             if (sessions.session.value == null) return@launch
             runCatching { api().registerPush(installationId, deviceName) }
-                .onFailure { Log.w("H2oPush", "push/register failed", it) }
+                .onFailure { ErrorLog.log("Push: register device", it) }
         }
     }
 
     /** Signs out on the server too when it can be reached; the local session goes either way. */
     suspend fun signOut() {
         voip.shutdown()
-        runCatching { api().logout() }
+        runCatching { api().logout() }.onFailure { ErrorLog.log("Sign out", it) }
         sessions.clear()
+    }
+
+    /** Logs a failed [what] (see [ErrorLog]) and signs out when the server no longer knows the session. */
+    fun onError(what: String, error: Throwable) {
+        ErrorLog.log(what, error)
+        onUnauthorized(error)
     }
 
     /** Called when the server rejects the token: back to the login screen. */

@@ -80,7 +80,9 @@ class SessionStore(context: Context) : TokenStore {
         val server = prefs.getString(KEY_SERVER, null) ?: return null
         if (load() == null) return null
         val user = prefs.getString(KEY_USER, null)?.let {
-            runCatching { H2oApi.JSON.decodeFromString(UserProfile.serializer(), it) }.getOrNull()
+            runCatching { H2oApi.JSON.decodeFromString(UserProfile.serializer(), it) }
+                .onFailure { e -> ErrorLog.log("Read the saved profile (sign in again)", e) }
+                .getOrNull()
         } ?: return null
         return Session(server, user)
     }
@@ -110,7 +112,7 @@ class SessionStore(context: Context) : TokenStore {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, sealed, 0, IV_SIZE))
         String(cipher.doFinal(sealed, IV_SIZE, sealed.size - IV_SIZE))
-    }.getOrNull()
+    }.onFailure { ErrorLog.log("Decrypt the saved tokens (sign in again)", it) }.getOrNull()
 
     private companion object {
         const val ANDROID_KEYSTORE = "AndroidKeyStore"

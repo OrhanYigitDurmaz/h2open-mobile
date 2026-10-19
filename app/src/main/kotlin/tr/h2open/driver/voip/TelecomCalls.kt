@@ -81,7 +81,7 @@ class TelecomCalls(private val context: Context) {
     }
 
     companion object {
-        private const val TAG = "H2oTelecom"
+        private const val TAG = "H2Open.Telecom"
         private const val ACCOUNT_ID = "h2open_pbx"
         const val EXTRA_NAME = "tr.h2open.driver.extra.NAME"
     }

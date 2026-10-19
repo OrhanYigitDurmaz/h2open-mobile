@@ -13,7 +13,7 @@ import tr.h2open.driver.BuildConfig
  * phone only rings while the app has a call going.
  */
 object Push {
-    private const val TAG = "H2oPush"
+    private const val TAG = "H2Open.Push"
 
     val configured: Boolean get() = BuildConfig.FCM_APP_ID.isNotEmpty()
 

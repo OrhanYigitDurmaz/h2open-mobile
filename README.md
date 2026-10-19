@@ -58,6 +58,17 @@ Kotlin, Jetpack Compose, Material 3. Min Android 8.0 (API 26).
   call tests against it (CI does the same).
   * Strings in English (`values/`) and Turkish (`values-tr/`).
 
+## Finding errors
+
+Error messages in the app say what went wrong and then the exact failure:
+the call (`POST driver/stops/12/deliver`), the HTTP status and Odoo's
+message, or the exception. Every failure is also written to logcat with its
+stack trace and Odoo's raw answer, under tags starting with `H2Open`:
+
+    adb logcat | grep H2Open
+
+In Android Studio's Logcat, filter on `tag:H2Open`.
+
 ## Build
 
 Needs JDK 17+ and the Android SDK (Android Studio has both).

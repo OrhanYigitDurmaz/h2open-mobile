@@ -69,7 +69,7 @@ class SummaryViewModel(private val app: H2oApplication, handle: SavedStateHandle
             trip = try {
                 Load.Ready(app.api().trip(tripId))
             } catch (e: Exception) {
-                app.onUnauthorized(e)
+                app.onError("Summary: load", e)
                 if (trip is Load.Ready) trip else Load.Failed(e)
             } finally {
                 refreshing = false

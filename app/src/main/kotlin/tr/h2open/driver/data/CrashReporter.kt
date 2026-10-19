@@ -18,7 +18,7 @@ import java.time.Instant
  * Odoo (Configuration > App Crashes) once the app runs signed in and online.
  */
 object CrashReporter {
-    private const val TAG = "H2oCrash"
+    private const val TAG = "H2Open.Crash"
     private const val MAX_SAVED = 20
 
     fun install(context: Context) {
