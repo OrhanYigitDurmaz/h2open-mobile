@@ -107,8 +107,21 @@ class MediaSession internal constructor(private val factory: PeerConnectionFacto
     var muted: Boolean = false
         set(value) {
             field = value
-            if (!closed) track.setEnabled(!value)
+            applyTracks()
         }
+
+    /** On hold (a phone call took over): neither side is heard until it is taken off hold. */
+    var held: Boolean = false
+        set(value) {
+            field = value
+            applyTracks()
+        }
+
+    private fun applyTracks() {
+        if (closed) return
+        track.setEnabled(!muted && !held)
+        connection.receivers.forEach { it.track()?.setEnabled(!held) }
+    }
 
     fun close() {
         if (closed) return

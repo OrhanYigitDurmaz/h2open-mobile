@@ -5,8 +5,12 @@ through the stops and confirm each delivery (quantities, empties collected,
 payment, signature). Drivers are notified when an order is placed and can take
 it themselves from the Orders tab: it goes on their trip of the day. It talks to the `h2o_driver` API of the
 [h2open-modules](https://github.com/OrhanYigitDurmaz/h2open-modules) Odoo
-modules (see `SPEC.md` there). Calling customers over VoIP (Asterisk) and push
-notifications come next.
+modules (see `SPEC.md` there). Drivers call customers over the office PBX
+(VoIP through Asterisk), and push notifications bring in calls, orders and trip
+changes.
+
+The app needs a connection: there is no offline mode. While the phone is
+offline a bar at the top says so and everything that changes data is disabled.
 
 Kotlin, Jetpack Compose, Material 3. Min Android 8.0 (API 26).
 
@@ -24,16 +28,28 @@ Kotlin, Jetpack Compose, Material 3. Min Android 8.0 (API 26).
   * `ui/login`, `ui/trips`, `ui/trip`, `ui/stop`, `ui/orders`: one screen
     each. Trips and Orders are the two tabs; the Orders tab lists the open
     orders (`GET driver/orders`) and takes one (`POST driver/orders/<id>/claim`).
-    A stop the driver took can be given back from the stop screen.
+    A stop the driver took can be given back from the stop screen. The trip
+    screen reorders the pending stops and opens `ui/summary`, the end-of-day
+    summary (also shown when a trip is closed). Navigation opens Google Maps
+    at the customer's pinned location (no Maps API, so no billing); stops
+    without a pin are marked "No location" and navigate by address.
+  * `data/Connectivity.kt`: online or not (`ui/common/Offline.kt` shows the bar).
+  * `data/CrashReporter.kt`: a crash is saved on the phone and sent to Odoo
+    (`POST crashes`, Water Delivery > Configuration > App Crashes) once the
+    app is online and signed in.
   * `voip/`: calls over the office PBX. `VoipManager` asks Odoo for SIP
     credentials (`POST sip/credentials`), registers only while a call or a
     push needs it, and pairs each SIP call with a WebRTC audio session
     (`WebRtcMedia`). `CallService` is the foreground service and call
-    notification, `CallActivity` the full-screen call UI.
+    notification, `CallActivity` the full-screen call UI. Each call is also
+    handed to Android's call system as a self-managed call (`TelecomCalls`,
+    `H2oConnectionService`): a GSM call holds it, car kits answer and hang
+    up, and Android routes the audio.
   * `push/`: Firebase Cloud Messaging; an `incoming_call` data message
     wakes the app to register so Asterisk can ring it. `order_open` shows a
     "New order" notification that opens the Orders tab; `order_claimed`
-    removes it once a driver has taken the order.
+    removes it once a driver has taken the order. `trip_changed` refreshes the
+    trip on screen.
 * `sip/`: plain Kotlin SIP-over-WebSocket user agent (RFC 3261 / 7118):
   registration with digest auth, outgoing and incoming calls, cancel, hang
   up. Media is not its job: it carries the SDP the app hands it.

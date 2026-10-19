@@ -17,8 +17,9 @@
     <!-- Required for the phoneCall foreground service type. -->
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
 
-    <!-- Lets the app open the dialer and maps apps on Android 11+. -->
+    <!-- Lets the app open the dialer and maps apps (Google Maps navigation first) on Android 11+. -->
     <queries>
+        <package android:name="com.google.android.apps.maps" />
         <intent>
             <action android:name="android.intent.action.DIAL" />
         </intent>
@@ -59,6 +60,16 @@
             android:name=".voip.CallService"
             android:exported="false"
             android:foregroundServiceType="phoneCall|microphone" />
+
+        <!-- Self-managed Telecom calls: Android sees VoIP calls so GSM calls and Bluetooth behave. -->
+        <service
+            android:name=".voip.H2oConnectionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".push.H2oMessagingService"

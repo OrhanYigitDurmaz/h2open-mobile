@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 import tr.h2open.driver.H2oApplication
 import tr.h2open.driver.R
 import tr.h2open.driver.api.UnauthorizedException
+import tr.h2open.driver.ui.common.LocalOnline
 import tr.h2open.driver.ui.common.errorText
 
 class LoginViewModel(private val app: H2oApplication) : ViewModel() {
@@ -121,7 +122,7 @@ fun LoginScreen(vm: LoginViewModel = viewModel(factory = LoginViewModel.Factory)
                 Text(message, color = MaterialTheme.colorScheme.error)
             }
 
-            Button(onClick = vm::submit, enabled = vm.canSubmit, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = vm::submit, enabled = vm.canSubmit && LocalOnline.current, modifier = Modifier.fillMaxWidth()) {
                 if (vm.busy) {
                     CircularProgressIndicator(Modifier.padding(2.dp), strokeWidth = 2.dp)
                 } else {

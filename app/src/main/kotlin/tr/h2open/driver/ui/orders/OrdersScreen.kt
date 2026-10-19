@@ -48,6 +48,7 @@ import tr.h2open.driver.push.OrderNotifications
 import tr.h2open.driver.ui.common.ErrorBox
 import tr.h2open.driver.ui.common.Load
 import tr.h2open.driver.ui.common.LoadingBox
+import tr.h2open.driver.ui.common.LocalOnline
 import tr.h2open.driver.ui.common.errorText
 import tr.h2open.driver.ui.common.formatDate
 import tr.h2open.driver.ui.common.formatMoney
@@ -68,6 +69,7 @@ class OrdersViewModel(private val app: H2oApplication) : ViewModel() {
     init {
         // A push said an order was placed or taken: show the list as it is now.
         viewModelScope.launch { app.ordersChangedEvents.collect { refresh() } }
+        viewModelScope.launch { app.backOnlineEvents.collect { refresh() } }
     }
 
     fun refresh() {
@@ -167,7 +169,7 @@ fun OrdersScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(state.value, key = { it.id }) { order ->
-                            OrderCard(order, busy = vm.claiming == order.id, enabled = vm.claiming == null, onClaim = { confirm = order })
+                            OrderCard(order, busy = vm.claiming == order.id, enabled = vm.claiming == null && LocalOnline.current, onClaim = { confirm = order })
                         }
                     }
                 }

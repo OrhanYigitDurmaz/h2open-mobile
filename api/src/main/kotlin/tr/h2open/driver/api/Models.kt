@@ -128,6 +128,8 @@ data class Trip(
     val canStart get() = state == TripState.PLANNED || state == TripState.LOADED
     val canClose get() = (state == TripState.LOADED || state == TripState.ON_ROAD) && pendingCount == 0
     val isActive get() = state == TripState.ON_ROAD
+    /** The driver may put the pending stops in another order (needs the stops, so trip detail only). */
+    val canReorder get() = state != TripState.CLOSED && state != TripState.CANCELLED && stops.count { it.isPending } > 1
 }
 
 @Serializable
@@ -157,6 +159,9 @@ data class Partner(
     val longitude: Double? = null,
     @SerialName("bottle_balance") val bottleBalance: Int = 0,
 ) {
+    /** Whether the office set the exact location of the address. */
+    val hasLocation get() = latitude != null && longitude != null
+
     val address get() = listOf(street, street2, listOf(zip, city).filter { it.isNotBlank() }.joinToString(" "))
         .filter { it.isNotBlank() }
         .joinToString(", ")
@@ -263,6 +268,24 @@ data class DeliverRequest(
 
 @Serializable
 data class FailRequest(val reason: String, val note: String? = null)
+
+/** A crash saved on the phone, sent to Odoo the next time the app runs. */
+@Serializable
+data class CrashReport(
+    @SerialName("stack_trace") val stackTrace: String,
+    val app: String = "driver",
+    @SerialName("app_version") val appVersion: String = "",
+    val device: String = "",
+    @SerialName("os_version") val osVersion: String = "",
+    /** ISO 8601, UTC. */
+    @SerialName("occurred_at") val occurredAt: String = "",
+)
+
+@Serializable
+data class CrashReportsRequest(val reports: List<CrashReport>)
+
+@Serializable
+data class CrashReportsResponse(val received: Int = 0)
 
 @Serializable
 data class PositionRequest(

@@ -72,6 +72,10 @@ class H2oApi(
 
     suspend fun me(): UserProfile = get("me", UserProfile.serializer())
 
+    /** Sends crash reports saved on the phone; returns how many Odoo kept. */
+    suspend fun sendCrashes(reports: List<CrashReport>): Int =
+        post("crashes", CrashReportsRequest(reports), CrashReportsRequest.serializer(), CrashReportsResponse.serializer()).received
+
     // ------------------------------------------------------------------
     // Trips and stops (h2o_driver)
     // ------------------------------------------------------------------
