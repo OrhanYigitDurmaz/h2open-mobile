@@ -48,15 +48,34 @@ jobs:
       - name: Lint findings
         if: failure()
         run: cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug
+      - name: Build APKs
+        run: ./gradlew :app:assembleDebug :app:assembleRelease -PdebugSignRelease
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lint-report
           path: app/build/reports/lint-results-debug.html
           if-no-files-found: ignore
+          retention-days: 14
+      # One artifact per ABI and build type, so a phone install only downloads arm64.
+      # Release APKs are shrunk with R8 and signed with the debug key.
       - uses: actions/upload-artifact@v7
         with:
-          name: h2open-driver-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: h2open-driver-arm64-release-apk
+          path: app/build/outputs/apk/release/*-arm64-v8a-release.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7
+        with:
+          name: h2open-driver-arm64-debug-apk
+          path: app/build/outputs/apk/debug/*-arm64-v8a-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7
+        with:
+          name: h2open-driver-x86_64-debug-apk
+          path: app/build/outputs/apk/debug/*-x86_64-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: APK sizes
+        run: ls -l app/build/outputs/apk/*/*.apk | awk '{printf "%6.1f MB  %s\n", $5/1048576, $9}' | tee -a "$GITHUB_STEP_SUMMARY"

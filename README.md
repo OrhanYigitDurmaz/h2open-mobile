@@ -74,12 +74,15 @@ In Android Studio's Logcat, filter on `tag:H2Open`.
 Needs JDK 17+ and the Android SDK (Android Studio has both).
 
 ```sh
-./gradlew :app:assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleDebug        # app/build/outputs/apk/debug/app-{arm64-v8a,x86_64}-debug.apk
 ./gradlew :api:test :app:testDebugUnitTest :app:lintDebug
 ```
 
-CI builds the debug APK on every pull request; download it from the run's
-**h2open-driver-debug-apk** artifact.
+The app is built as one APK per ABI, 64-bit only: `arm64-v8a` for phones and
+`x86_64` for the emulator. CI builds them on every pull request; download them
+from the run's artifacts (kept 14 days): **h2open-driver-arm64-release-apk**
+(shrunk with R8, signed with the debug key), **h2open-driver-arm64-debug-apk**
+and **h2open-driver-x86_64-debug-apk**.
 
 ### Push for incoming calls
 
