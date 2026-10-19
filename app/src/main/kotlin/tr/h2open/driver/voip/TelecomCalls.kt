@@ -57,6 +57,9 @@ class TelecomCalls(private val context: Context) {
                 putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, Bundle().apply { putString(EXTRA_NAME, name) })
             }
             telecom.placeCall(Uri.fromParts(PhoneAccount.SCHEME_TEL, number, null), extras)
+        } catch (e: SecurityException) {
+            // MANAGE_OWN_CALLS is granted at install; this only happens if the phone refuses it.
+            Log.w(TAG, "No permission to hand the call to the call system", e)
         } catch (e: RuntimeException) {
             Log.w(TAG, "The call system refused the outgoing call", e)
         }
