@@ -60,6 +60,12 @@
     <string name="login_submit">Sign in</string>
     <string name="login_subtitle">Sign in with your Odoo account.</string>
     <string name="login_user">User name</string>
+    <string name="map_no_pins">No stop on this trip has a location yet. The office can pin them on the customer form in Odoo.</string>
+    <plurals name="map_without_location">
+        <item quantity="one">%1$d stop has no location and is not on the map: %2$s</item>
+        <item quantity="other">%1$d stops have no location and are not on the map: %2$s</item>
+    </plurals>
+    <string name="maps_no_app">No maps app or browser on this phone can open this.</string>
     <string name="offline_banner">You are offline. You can\'t make changes until the connection is back.</string>
     <string name="order_notification_title">New order: %1$s</string>
     <string name="orders_already_taken">Another driver already took this order.</string>
@@ -135,12 +141,19 @@
     </plurals>
     <string name="trip_reorder">Reorder stops</string>
     <string name="trip_reorder_hint">Put the stops left in the order you will drive them.</string>
+    <string name="trip_route">Route in Google Maps</string>
+    <plurals name="trip_route_next">
+        <item quantity="one">Google Maps takes %1$d stop at a time: the route covers the next one.</item>
+        <item quantity="other">Google Maps takes %1$d stops at a time: the route covers the next %1$d.</item>
+    </plurals>
     <string name="trip_start">Start trip</string>
     <string name="trip_state_cancelled">Cancelled</string>
     <string name="trip_state_closed">Closed</string>
     <string name="trip_state_loaded">Loaded</string>
     <string name="trip_state_on_road">On the road</string>
     <string name="trip_state_planned">Planned</string>
+    <string name="trip_tab_map">Map</string>
+    <string name="trip_tab_stops">Stops</string>
     <string name="trips_empty">No trips for you today.</string>
     <string name="trips_title">Today\'s trips</string>
 </resources>

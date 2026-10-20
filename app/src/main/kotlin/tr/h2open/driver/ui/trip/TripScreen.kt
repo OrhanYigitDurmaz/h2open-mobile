@@ -1,5 +1,6 @@
 package tr.h2open.driver.ui.trip
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOff
@@ -29,9 +31,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -41,12 +45,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
@@ -60,6 +67,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.launch
 import tr.h2open.driver.H2oApplication
 import tr.h2open.driver.R
+import tr.h2open.driver.api.RouteLink
 import tr.h2open.driver.api.Stop
 import tr.h2open.driver.api.StopState
 import tr.h2open.driver.api.Trip
@@ -70,6 +78,8 @@ import tr.h2open.driver.ui.common.LocalOnline
 import tr.h2open.driver.ui.common.errorText
 import tr.h2open.driver.ui.common.formatMoney
 import tr.h2open.driver.ui.common.formatQty
+import tr.h2open.driver.ui.map.StopsMap
+import tr.h2open.driver.ui.map.openRoute
 import tr.h2open.driver.ui.theme.StatusColors
 
 class TripViewModel(private val app: H2oApplication, handle: SavedStateHandle) : ViewModel() {
@@ -192,6 +202,7 @@ fun TripScreen(
         }
     }
     var confirmClose by remember { mutableStateOf(false) }
+    var showMap by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -228,13 +239,23 @@ fun TripScreen(
                 Load.Loading -> LoadingBox()
                 is Load.Failed -> ErrorBox(state.error, onRetry = vm::refresh)
                 is Load.Ready -> when (val order = vm.reordering) {
-                    null -> TripContent(
-                        trip = state.value,
-                        busy = vm.busy || !online,
-                        onStart = vm::start,
-                        onClose = { confirmClose = true },
-                        onOpenStop = { onOpenStop(state.value.id, it.id) },
-                    )
+                    null -> Column(Modifier.fillMaxSize()) {
+                        PrimaryTabRow(selectedTabIndex = if (showMap) 1 else 0) {
+                            Tab(selected = !showMap, onClick = { showMap = false }, text = { Text(stringResource(R.string.trip_tab_stops)) })
+                            Tab(selected = showMap, onClick = { showMap = true }, text = { Text(stringResource(R.string.trip_tab_map)) })
+                        }
+                        if (showMap) {
+                            TripMap(trip = state.value, onOpenStop = { onOpenStop(state.value.id, it.id) })
+                        } else {
+                            TripContent(
+                                trip = state.value,
+                                busy = vm.busy || !online,
+                                onStart = vm::start,
+                                onClose = { confirmClose = true },
+                                onOpenStop = { onOpenStop(state.value.id, it.id) },
+                            )
+                        }
+                    }
                     else -> ReorderContent(
                         stops = order,
                         busy = vm.busy || !online,
@@ -280,6 +301,7 @@ private fun TripContent(trip: Trip, busy: Boolean, onStart: () -> Unit, onClose:
                 Text(stringResource(R.string.trip_bottles, trip.plannedBottleQty))
                 if (trip.cashExpected > 0) Text(stringResource(R.string.trip_cash, formatMoney(trip.cashExpected, trip.currency)))
                 if (trip.note.isNotBlank()) Text(trip.note, style = MaterialTheme.typography.bodyMedium)
+                RouteButton(trip)
                 when {
                     trip.canStart -> Button(onClick = onStart, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.trip_start))
@@ -293,6 +315,59 @@ private fun TripContent(trip: Trip, busy: Boolean, onStart: () -> Unit, onClose:
         items(trip.stops, key = { it.id }) { stop ->
             StopRow(stop, enabled = trip.isActive, onClick = { onOpenStop(stop) })
         }
+    }
+}
+
+/** The pinned stops on a map; the ones without a pin are named under it. */
+@Composable
+private fun TripMap(trip: Trip, onOpenStop: (Stop) -> Unit) {
+    val pending = MaterialTheme.colorScheme.primary
+    val unpinned = trip.stops.filter { it.isPending && !it.partner.hasLocation }
+    Column(Modifier.fillMaxSize()) {
+        if (trip.stops.any { it.partner.hasLocation }) {
+            StopsMap(
+                stops = trip.stops,
+                colorOf = { statusColor(it.state, pending) },
+                onOpenStop = onOpenStop,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            )
+        } else {
+            Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.map_no_pins), textAlign = TextAlign.Center)
+            }
+        }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (unpinned.isNotEmpty()) {
+                Text(
+                    pluralStringResource(
+                        R.plurals.map_without_location,
+                        unpinned.size,
+                        unpinned.size,
+                        unpinned.joinToString(", ") { "${it.sequence}. ${it.partner.name}" },
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            RouteButton(trip)
+        }
+    }
+}
+
+/** Google Maps with the route through the pending stops, in the trip's order. */
+@Composable
+private fun RouteButton(trip: Trip) {
+    if (trip.pendingCount == 0) return
+    val context = LocalContext.current
+    OutlinedButton(
+        onClick = { if (!openRoute(context, trip.stops)) Toast.makeText(context, R.string.maps_no_app, Toast.LENGTH_LONG).show() },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(Icons.Filled.Directions, contentDescription = null)
+        Text(stringResource(R.string.trip_route), Modifier.padding(start = 8.dp))
+    }
+    if (trip.pendingCount > RouteLink.MAX_STOPS) {
+        Text(pluralStringResource(R.plurals.trip_route_next, RouteLink.MAX_STOPS, RouteLink.MAX_STOPS), style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -374,9 +449,11 @@ private fun ReorderContent(stops: List<Stop>, busy: Boolean, onMove: (index: Int
 }
 
 @Composable
-private fun stopColor(state: String): Color = when (state) {
+private fun stopColor(state: String): Color = statusColor(state, pending = MaterialTheme.colorScheme.primary)
+
+private fun statusColor(state: String, pending: Color): Color = when (state) {
     StopState.DELIVERED -> StatusColors.delivered
     StopState.FAILED -> StatusColors.failed
     StopState.SKIPPED -> StatusColors.skipped
-    else -> MaterialTheme.colorScheme.primary
+    else -> pending
 }

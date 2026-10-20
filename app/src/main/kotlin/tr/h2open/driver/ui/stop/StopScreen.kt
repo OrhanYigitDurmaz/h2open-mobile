@@ -1,9 +1,8 @@
 package tr.h2open.driver.ui.stop
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -73,7 +72,6 @@ import tr.h2open.driver.api.ApiException
 import tr.h2open.driver.api.DeliverRequest
 import tr.h2open.driver.api.DeliveredLine
 import tr.h2open.driver.api.FailureReason
-import tr.h2open.driver.api.Partner
 import tr.h2open.driver.api.PaymentMethod
 import tr.h2open.driver.api.Stop
 import tr.h2open.driver.api.Trip
@@ -85,6 +83,8 @@ import tr.h2open.driver.ui.common.LocalOnline
 import tr.h2open.driver.ui.common.errorText
 import tr.h2open.driver.ui.common.formatMoney
 import tr.h2open.driver.ui.common.formatQty
+import tr.h2open.driver.ui.map.navigateTo
+import tr.h2open.driver.ui.map.startSafely
 import tr.h2open.driver.ui.trip.NoLocationLabel
 import tr.h2open.driver.ui.trip.failureReasonLabel
 import tr.h2open.driver.ui.trip.paymentMethodLabel
@@ -289,7 +289,9 @@ private fun CustomerCard(stop: Stop) {
                         Icon(Icons.Filled.Dialpad, contentDescription = stringResource(R.string.stop_call_phone))
                     }
                 }
-                OutlinedButton(onClick = { navigate(context, partner) }) {
+                OutlinedButton(onClick = {
+                    if (!navigateTo(context, partner)) Toast.makeText(context, R.string.maps_no_app, Toast.LENGTH_LONG).show()
+                }) {
                     Icon(Icons.Filled.Directions, contentDescription = null)
                     Text(stringResource(R.string.stop_navigate), Modifier.padding(start = 8.dp))
                 }
@@ -481,31 +483,4 @@ private fun FailDialog(onDismiss: () -> Unit, onConfirm: (reason: String, note: 
 private fun dial(context: Context, phone: String) {
     val number = phone.filter { it.isDigit() || it == '+' }
     context.startSafely(Intent(Intent.ACTION_DIAL, "tel:$number".toUri()))
-}
-
-/**
- * Starts Google Maps turn-by-turn to the customer's pin. Without Google Maps,
- * opens any maps app on the pin; without a pin, on the address text.
- * Opening the maps app costs nothing: no Google API is called.
- */
-private fun navigate(context: Context, partner: Partner) {
-    val lat = partner.latitude
-    val lng = partner.longitude
-    if (lat != null && lng != null) {
-        val googleMaps = Intent(Intent.ACTION_VIEW, "google.navigation:q=$lat,$lng".toUri()).setPackage(GOOGLE_MAPS)
-        if (context.startSafely(googleMaps)) return
-        context.startSafely(Intent(Intent.ACTION_VIEW, "geo:$lat,$lng?q=$lat,$lng(${Uri.encode(partner.name)})".toUri()))
-    } else {
-        context.startSafely(Intent(Intent.ACTION_VIEW, "geo:0,0?q=${Uri.encode(partner.address)}".toUri()))
-    }
-}
-
-private const val GOOGLE_MAPS = "com.google.android.apps.maps"
-
-/** False when no app on the phone can open [intent]. */
-private fun Context.startSafely(intent: Intent): Boolean = try {
-    startActivity(intent)
-    true
-} catch (_: ActivityNotFoundException) {
-    false
 }

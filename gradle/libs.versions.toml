@@ -2,7 +2,7 @@
 agp = "9.4.1"
 kotlin = "2.4.21"
 coroutines = "1.11.0"
-serialization = "1.11.0"
+serialization = "1.12.0"
 okhttp = "5.5.0"
 junit = "4.13.2"
 composeBom = "2026.09.00"
@@ -13,6 +13,7 @@ navigation = "2.10.2"
 fragment = "1.9.1"
 webrtc = "150.7871.01"
 firebaseMessaging = "26.0.0"
+osmdroid = "6.1.20"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -38,6 +39,7 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-material-icons = { module = "androidx.compose.material:material-icons-extended" }
 webrtc = { module = "io.github.webrtc-sdk:android", version.ref = "webrtc" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
+osmdroid = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

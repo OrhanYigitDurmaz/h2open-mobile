@@ -13,8 +13,8 @@ android {
         applicationId = "tr.h2open.driver"
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
 
         // Push (FCM): drop the Firebase project's google-services.json into app/ (it is not committed).
         // Without it the app still builds and calls work, but nothing wakes it for incoming calls.
@@ -77,6 +77,8 @@ dependencies {
     implementation(project(":sip"))
     implementation(libs.webrtc)
     implementation(libs.firebase.messaging)
+    // The trip map: OpenStreetMap tiles, no API key and nothing billed.
+    implementation(libs.osmdroid)
     // Firebase (via Play services) pulls in fragment 1.1, too old for the ActivityResult APIs.
     implementation(libs.androidx.fragment)
 
