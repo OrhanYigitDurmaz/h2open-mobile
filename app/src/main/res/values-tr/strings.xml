@@ -60,6 +60,12 @@
     <string name="login_submit">Giriş yap</string>
     <string name="login_subtitle">Odoo hesabınızla giriş yapın.</string>
     <string name="login_user">Kullanıcı adı</string>
+    <string name="map_no_pins">Bu seferdeki hiçbir durağın konumu henüz yok. Ofis, Odoo\'daki müşteri formunda işaretleyebilir.</string>
+    <plurals name="map_without_location">
+        <item quantity="one">%1$d durağın konumu yok, haritada değil: %2$s</item>
+        <item quantity="other">%1$d durağın konumu yok, haritada değiller: %2$s</item>
+    </plurals>
+    <string name="maps_no_app">Bu telefonda bunu açabilecek bir harita uygulaması veya tarayıcı yok.</string>
     <string name="offline_banner">Çevrimdışısınız. Bağlantı gelene kadar değişiklik yapamazsınız.</string>
     <string name="order_notification_title">Yeni sipariş: %1$s</string>
     <string name="orders_already_taken">Bu siparişi başka bir şoför aldı.</string>
@@ -135,12 +141,16 @@
     </plurals>
     <string name="trip_reorder">Durakları sırala</string>
     <string name="trip_reorder_hint">Kalan durakları gideceğiniz sıraya koyun.</string>
+    <string name="trip_route">Google Haritalar\'da rota</string>
+    <string name="trip_route_next">Google Haritalar bir seferde %1$d durak alır: rota sıradaki %1$d durağı kapsar.</string>
     <string name="trip_start">Seferi başlat</string>
     <string name="trip_state_cancelled">İptal edildi</string>
     <string name="trip_state_closed">Kapandı</string>
     <string name="trip_state_loaded">Yüklendi</string>
     <string name="trip_state_on_road">Yolda</string>
     <string name="trip_state_planned">Planlandı</string>
+    <string name="trip_tab_map">Harita</string>
+    <string name="trip_tab_stops">Duraklar</string>
     <string name="trips_empty">Bugün size atanmış sefer yok.</string>
     <string name="trips_title">Bugünkü seferler</string>
 </resources>

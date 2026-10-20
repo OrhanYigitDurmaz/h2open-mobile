@@ -29,6 +29,10 @@ Kotlin, Jetpack Compose, Material 3. Min Android 8.0 (API 26).
     each. Trips and Orders are the two tabs; the Orders tab lists the open
     orders (`GET driver/orders`) and takes one (`POST driver/orders/<id>/claim`).
     A stop the driver took can be given back from the stop screen. The trip
+    screen has a Map tab (`ui/map/StopsMap.kt`): the stops as numbered pins on
+    OpenStreetMap (osmdroid, no API key), and a button that opens the route
+    through the pending stops in Google Maps (`api/RouteLink.kt`, a plain Maps
+    URL, nothing billed). The trip
     screen reorders the pending stops and opens `ui/summary`, the end-of-day
     summary (also shown when a trip is closed). Navigation opens Google Maps
     at the customer's pinned location (no Maps API, so no billing); stops
