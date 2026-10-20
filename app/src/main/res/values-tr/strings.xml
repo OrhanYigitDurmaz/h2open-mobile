@@ -142,7 +142,10 @@
     <string name="trip_reorder">Durakları sırala</string>
     <string name="trip_reorder_hint">Kalan durakları gideceğiniz sıraya koyun.</string>
     <string name="trip_route">Google Haritalar\'da rota</string>
-    <string name="trip_route_next">Google Haritalar bir seferde %1$d durak alır: rota sıradaki %1$d durağı kapsar.</string>
+    <plurals name="trip_route_next">
+        <item quantity="one">Google Haritalar bir seferde %1$d durak alır: rota sıradakini kapsar.</item>
+        <item quantity="other">Google Haritalar bir seferde %1$d durak alır: rota sıradaki %1$d durağı kapsar.</item>
+    </plurals>
     <string name="trip_start">Seferi başlat</string>
     <string name="trip_state_cancelled">İptal edildi</string>
     <string name="trip_state_closed">Kapandı</string>

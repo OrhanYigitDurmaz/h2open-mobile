@@ -142,7 +142,10 @@
     <string name="trip_reorder">Reorder stops</string>
     <string name="trip_reorder_hint">Put the stops left in the order you will drive them.</string>
     <string name="trip_route">Route in Google Maps</string>
-    <string name="trip_route_next">Google Maps takes %1$d stops at a time: the route covers the next %1$d.</string>
+    <plurals name="trip_route_next">
+        <item quantity="one">Google Maps takes %1$d stop at a time: the route covers the next one.</item>
+        <item quantity="other">Google Maps takes %1$d stops at a time: the route covers the next %1$d.</item>
+    </plurals>
     <string name="trip_start">Start trip</string>
     <string name="trip_state_cancelled">Cancelled</string>
     <string name="trip_state_closed">Closed</string>

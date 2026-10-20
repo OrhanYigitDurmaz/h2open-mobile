@@ -367,7 +367,7 @@ private fun RouteButton(trip: Trip) {
         Text(stringResource(R.string.trip_route), Modifier.padding(start = 8.dp))
     }
     if (trip.pendingCount > RouteLink.MAX_STOPS) {
-        Text(stringResource(R.string.trip_route_next, RouteLink.MAX_STOPS), style = MaterialTheme.typography.bodySmall)
+        Text(pluralStringResource(R.plurals.trip_route_next, RouteLink.MAX_STOPS, RouteLink.MAX_STOPS), style = MaterialTheme.typography.bodySmall)
     }
 }
 

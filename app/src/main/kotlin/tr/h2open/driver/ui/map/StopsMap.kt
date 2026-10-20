@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.graphics.drawable.BitmapDrawable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -15,6 +14,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -76,7 +76,7 @@ fun StopsMap(stops: List<Stop>, colorOf: (Stop) -> Color, onOpenStop: (Stop) -> 
         pins.forEach { stop ->
             view.overlays.add(Marker(view).apply {
                 position = GeoPoint(stop.partner.latitude!!, stop.partner.longitude!!)
-                icon = BitmapDrawable(view.resources, pinBitmap(view.context, stop.sequence.toString(), colors.getValue(stop.id)))
+                icon = pinBitmap(view.context, stop.sequence.toString(), colors.getValue(stop.id)).toDrawable(view.resources)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 // No bubble: a tap opens the stop.
                 setInfoWindow(null as MarkerInfoWindow?)
